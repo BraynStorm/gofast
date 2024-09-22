@@ -18,7 +18,7 @@
     "cSpell.words": [
         "GOFAST"
     ],
-    "triggerTaskOnSave.delay": 0,
+    "triggerTaskOnSave.delay": 400,
     "triggerTaskOnSave.restart": true,
     "triggerTaskOnSave.showStatusBarToggle": true,
     "triggerTaskOnSave.showBusyIndicator": true,

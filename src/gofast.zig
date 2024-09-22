@@ -7,7 +7,6 @@ const SString = @import("smallstring.zig").ShortString;
 const Allocator = std.mem.Allocator;
 
 /// Gofast project system
-///
 pub const Gofast = struct {
     /// Store the tickets in the system.
     lock: std.Thread.RwLock = .{},
@@ -49,6 +48,61 @@ pub const Gofast = struct {
 
     pub fn deleteTicket(self: *Self, key: Ticket.Key) !void {
         try self.tickets.removeOne(key);
+    }
+
+    const UpdateTicket = struct {
+        title: ?[]const u8 = null,
+        description: ?[]const u8 = null,
+        parent: ??Ticket.Key = null,
+        status: ?Ticket.Status = null,
+        priority: ?Ticket.Priority = null,
+        type: ?Ticket.Type = null,
+    };
+    pub fn updateTicket(self: *Self, key: Ticket.Key, u: UpdateTicket) !void {
+        const alloc = self.tickets.alloc;
+        var slice = self.tickets.tickets.slice();
+        const keys = slice.items(.key);
+
+        const index: usize = i: for (0..slice.len) |i| {
+            if (keys[i] == key) {
+                break :i i;
+            }
+        } else {
+            return error.NotFound;
+        };
+
+        //TODO:
+        //  Record the changes in some history structure.
+        //
+
+        if (u.type) |p| slice.items(.type)[index] = p;
+        if (u.priority) |p| slice.items(.priority)[index] = p;
+        if (u.status) |p| slice.items(.status)[index] = p;
+        if (u.parent) |p| {
+            //PERF:
+            // Can optimize this slightly by reusing the index we already found
+            // int the code above.
+            try self.tickets.setParent(key, p);
+        }
+        if (u.title) |p| {
+            const titles = slice.items(.title);
+            var old = titles[index];
+            old.deinit(alloc);
+            titles[index] = try SString.fromSlice(p, alloc);
+        }
+        if (u.description) |p| {
+            const descriptions = slice.items(.description);
+            var old = descriptions[index];
+            old.deinit(alloc);
+            descriptions[index] = try SString.fromSlice(p, alloc);
+        }
+    }
+
+    pub fn setEstimate(self: *Self, ticket: Ticket.Key, person: Ticket.Person, estimate: Ticket.TimeSpent.Seconds) !void {
+        try self.tickets.setEstimate(ticket, person, estimate);
+    }
+    pub fn logWork(self: *Self, ticket: Ticket.Key, person: Ticket.Person, t_start: i64, t_end: i64) !void {
+        try self.tickets.logWork(ticket, person, t_start, t_end);
     }
 };
 

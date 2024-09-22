@@ -137,7 +137,31 @@ aside {
 
   &.hidden {
     width: 0em;
-    padding: 0.2em
+    padding: 0.2em;
+  }
+
+  &.enter {
+    transition: transform 500ms;
+
+    &.enterstart {
+      transform: translate(-100%, 0);
+    }
+
+    &.enterend {
+      transform: translate(0%, 0);
+    }
+  }
+
+  &.leave {
+    transition: transform 350ms;
+
+    &.leavestart {
+      transform: translate(0%, 0);
+    }
+
+    &.leaveend {
+      transform: translate(-100%, 0);
+    }
   }
 
   input {
@@ -195,6 +219,10 @@ main {
   border-collapse: collapse;
 
   &>tr {
+    &.highlight {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
     &:first-child>td {
       border-top: $border;
     }
@@ -220,22 +248,25 @@ main {
       &:nth-child(6),
       &:nth-child(7) {
         text-wrap: nowrap;
-
       }
 
+
       &>a.ticket {
-        display: block;
-        border: 2px solid black;
-        border-radius: 12px;
-        padding: 5px;
+        text-decoration: none;
+        color: rgb(0, 102, 204);
+
+        &:hover {
+          text-decoration: underline;
+        }
+
+        &:visited {
+        }
       }
     }
 
 
   }
 }
-
-.ticket-table>tr>td
 
 /*******************************************************************************
  ***     Tickets     *** 
@@ -249,10 +280,9 @@ main {
   .description {}
 }
 
-
-button.btn-cross {
+@mixin svg-button($name) {
   background-color: transparent;
-  background-image: url('/static/ui/button_cross.svg');
+  background-image: url('/static/ui/icons/button_#{$name}.svg');
   background-repeat: no-repeat no-repeat;
   background-size: 100% 100%;
   padding: 0;
@@ -262,32 +292,48 @@ button.btn-cross {
   cursor: pointer;
 
   &:hover {
-    background-image: url('/static/ui/button_cross_hover.svg');
+    background-image: url('/static/ui/icons/button_#{$name}_hover.svg');
   }
 
   &:active {
-    background-image: url('/static/ui/button_cross.svg');
+    background-image: url('/static/ui/icons/button_#{$name}.svg');
     background-size: -100% -100%;
   }
 }
 
+button.btn-cross {
+  @include svg-button("cross");
+}
+
 button.btn-plus {
-  background-color: transparent;
-  background-image: url('/static/ui/button_plus.svg');
-  background-repeat: no-repeat no-repeat;
-  background-size: 100% 100%;
-  padding: 0;
-  border: 0;
-  width: 2em;
-  aspect-ratio: 1;
-  cursor: pointer;
+  @include svg-button("plus");
+}
 
-  &:hover {
-    background-image: url('/static/ui/button_plus_hover.svg');
-  }
+button.btn-checkmark {
+  @include svg-button("checkmark");
+}
 
-  &:active {
-    background-image: url('/static/ui/button_plus.svg');
-    background-size: -100% -100%;
+/******************************************************************************
+ *** Tooltip ***
+ ******************************************************************************/
+body>div.tooltip {
+  display: flex;
+  height: 200px;
+  flex-direction: column;
+  max-width: 40%;
+  padding: 1em;
+  border-radius: $insetRound;
+
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  overflow: scroll;
+
+  background: $c2;
+  border: 1px solid $c5;
+
+  &>img {
+    width: 2em;
   }
 }

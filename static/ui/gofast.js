@@ -12,13 +12,14 @@ document.addEventListener("alpine:init", () => {
 
         max_key: 0,
 
+        // Model: The ticket table.
         m_table: {
-            page_number: 0,
-            page_from: 0,
-            page_to: 0,
-            max: 1000,
+            highlight_key: 0,
+            // page_number: 0,
+            // page_from: 0,
+            // page_to: 0,
+            // max: 1000,
         },
-
         // Model: New Ticket.
         m_nt: {
             title: "",
@@ -32,20 +33,21 @@ document.addEventListener("alpine:init", () => {
         m_et: {
             title: "",
             description: "",
-            maybe_parent: null,
+            parent: null,
             type: 0,
             priority: 0,
             status: 0,
+        },
+        // Model: Tooltip
+        m_tooltip: {
+            key: 0,
+            position: [0, 0],
         },
 
         inset: {
             // Kinda external to the rest of the fields. 
             mode: 'create',
             create: {},
-        },
-        main: {
-            mode: 'table',
-            table: {},
         },
         left_panel: { mode: '' },
         right_panel: { mode: '' },
@@ -56,13 +58,13 @@ document.addEventListener("alpine:init", () => {
                 this.name_types = r.name_types;
                 this.name_priorities = r.name_priorities;
                 this.name_statuses = r.name_statuses;
-                const keys = r.keys;
-                const parents = r.parents;
-                const titles = r.titles;
-                const descriptions = r.descriptions;
-                const types = r.types;
-                const priorities = r.priorities;
-                const statuses = r.statuses;
+                const keys = r.tickets.keys;
+                const parents = r.tickets.parents;
+                const titles = r.tickets.titles;
+                const descriptions = r.tickets.descriptions;
+                const types = r.tickets.types;
+                const priorities = r.tickets.priorities;
+                const statuses = r.tickets.statuses;
 
                 console.log(`-> /api/tickets -> ${keys.length}/${count} ticket(s), max_key=${max_key}`);
 
@@ -101,6 +103,11 @@ document.addEventListener("alpine:init", () => {
                 this.m_nt.description,
                 this.m_nt.maybe_parent,
             )
+        },
+        ui_hover_ticket(event, key) {
+            if (this.m_tooltip.key !== key) this.m_tooltip.key = key;
+            this.m_tooltip.position[0] = event.clientX;
+            this.m_tooltip.position[1] = event.clientY;
         },
         ui_delete_ticket(key) {
             if (confirm(`Are you sure you want to delete ${this.display_key(key)}`)) {
@@ -185,6 +192,12 @@ document.addEventListener("alpine:init", () => {
             this.inset.mode = 'edit';
             this.left_panel.mode = 'edit';
             this.m_et = { ... this.tickets[key], key: key };
+            this.m_table.highlight_key = key;
+        },
+        stop_edit_ticket() {
+            if (this.inset.mode === 'edit') this.inset.mode = '';
+            if (this.left_panel.mode === 'edit') this.left_panel.mode = '';
+            this.m_table.highlight_key = 0;
         },
         display_key(key) {
             return display_key(key, this.max_key);
@@ -193,7 +206,7 @@ document.addEventListener("alpine:init", () => {
             /*TODO:
                 Map priority->image on the server.
             */
-            return `/static/ui/priority_${priority - 3}.svg`;
+            return `/static/ui/icons/priority_${priority - 3}.svg`;
         }
     }));
 });

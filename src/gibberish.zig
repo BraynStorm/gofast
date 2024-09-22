@@ -154,7 +154,12 @@ fn isChildRecursive(
 
 /// Init some giberrish in the Gofast ticket system.
 /// Used for DX improvement.
-pub fn initGiberish(comptime count: usize, gofast: *Gofast, alloc: Allocator) !void {
+pub fn initGiberish(
+    comptime n_tickets: usize,
+    comptime n_people: usize,
+    gofast: *Gofast,
+    alloc: Allocator,
+) !void {
     var prng = comptime std.rand.DefaultPrng.init(12344321 - 20);
     const random = prng.random();
     const t_start = std.time.nanoTimestamp();
@@ -162,9 +167,9 @@ pub fn initGiberish(comptime count: usize, gofast: *Gofast, alloc: Allocator) !v
     const title_gen = RandomStringGen(.{ .max_words = 12 });
     const description_gen = RandomStringGen(.{ .max_words = 105 });
 
-    try gofast.tickets.tickets.ensureTotalCapacity(gofast.tickets.alloc, count);
+    try gofast.tickets.tickets.ensureTotalCapacity(gofast.tickets.alloc, n_tickets);
 
-    for (0..count) |_| {
+    for (0..n_tickets) |_| {
         const max_type: Ticket.Type = @intCast(gofast.tickets.name_types.items.len - 1);
         const max_priority: Ticket.Priority = @intCast(gofast.tickets.name_priorities.items.len - 1);
         const max_status: Ticket.Status = @intCast(gofast.tickets.name_statuses.items.len - 1);
@@ -191,11 +196,11 @@ pub fn initGiberish(comptime count: usize, gofast: *Gofast, alloc: Allocator) !v
     //BUG:
     //  This can produce cycles,
 
-    for (0..count) |me_usize| {
+    for (0..n_tickets) |me_usize| {
         if (std.rand.int(random, u8) <= (255 / 3)) {
             const me: Ticket.Key = @intCast(1 + me_usize);
             while (true) {
-                const parent = std.rand.intRangeAtMost(random, Ticket.Key, 1, count);
+                const parent = std.rand.intRangeAtMost(random, Ticket.Key, 1, n_tickets);
 
                 // Am I my own parent (weird)?
                 if (parent == me) continue;
@@ -207,6 +212,25 @@ pub fn initGiberish(comptime count: usize, gofast: *Gofast, alloc: Allocator) !v
                 try gofast.tickets.setParent(me, parent);
                 break;
             }
+        }
+    }
+
+    for (0..n_tickets) |ticket_i| {
+        if (std.rand.int(random, u8) <= (255 / 2)) {
+            const key: Ticket.Key = @intCast(1 + ticket_i);
+            const person: Ticket.Person = std.rand.intRangeAtMost(
+                random,
+                Ticket.Person,
+                1,
+                n_people,
+            );
+
+            const estimated = std.rand.intRangeAtMost(random, Ticket.TimeSpent.Seconds, 1, 60 * 60);
+            const worktime = std.rand.intRangeAtMost(random, Ticket.TimeSpent.Seconds, 1, 60 * 60);
+            const time_started = std.rand.intRangeAtMost(random, i64, 1727000000, std.time.timestamp());
+
+            try gofast.setEstimate(key, person, estimated);
+            try gofast.logWork(key, person, time_started, time_started + worktime);
         }
     }
 

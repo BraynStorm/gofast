@@ -22,6 +22,7 @@ pub const Ticket = struct {
     pub const Type = i8;
     pub const Priority = i8;
     pub const Status = i8;
+    pub const Person = u32;
 
     // const Index = usize;
     pub const LinkType = enum(u8) {
@@ -48,6 +49,21 @@ pub const Ticket = struct {
                 .to = To.init(),
             };
         }
+    };
+    //PERF:
+    //  There's probably a better way to arrange this,
+    //  such that we can easily find stuff.
+    /// Use a MAL to store these.
+    pub const TimeSpent = struct {
+        ticket: Key,
+        person: Person,
+        time: packed struct {
+            estimate: Seconds = 0,
+            spent: Seconds = 0,
+        } = .{},
+
+        pub const Seconds = u32; // Can fit ~500years of full workdays
+        pub const Timestamp = i64; // std.time.timestamp()
     };
 };
 
@@ -79,6 +95,7 @@ pub const TicketStore = struct {
     ///
     /// Always kept sorted by .key. (Implcit)
     tickets: std.MultiArrayList(Ticket) = .{},
+    ticket_time_spent: std.MultiArrayList(Ticket.TimeSpent) = .{},
 
     // PERF: Convert to a hashmap with a linked list.
     graph_children: std.MultiArrayList(Ticket.FatLink) = .{},
@@ -557,14 +574,6 @@ pub const TicketStore = struct {
 
         return error.NotFound;
     }
-    fn findIndexBounded(self: *const Self, key: Ticket.Key, min: MalIndex, max: MalIndex) Error!MalIndex {
-        for (self.tickets.items(.key)[min..max], min..max) |k, i| {
-            if (k == key)
-                return i;
-        }
-
-        return error.NotFound;
-    }
 
     /// Collect all children from a given ticket to any other ticket.
     pub fn childrenAlloc(
@@ -573,7 +582,7 @@ pub const TicketStore = struct {
         alloc: Allocator,
         guess_count: ?usize,
     ) ![]Ticket.Key {
-        const initial_capacity: usize = if (guess_count) |g| g else 8;
+        const initial_capacity: usize = guess_count orelse 8;
 
         // Hold the links here.
         var our_children = try std.ArrayListUnmanaged(Ticket.Key).initCapacity(self.alloc, initial_capacity);
@@ -595,6 +604,81 @@ pub const TicketStore = struct {
         our_children.shrinkAndFree(alloc, our_children.items.len);
         return our_children.items;
     }
+
+    /// Log work by a single person on a single
+    pub fn logWork(
+        self: *Self,
+        ticket: Ticket.Key,
+        person: Ticket.Person,
+        timestamp_started: i64,
+        timestamp_ended: i64,
+    ) !void {
+        const worked_seconds_i64 = timestamp_ended - timestamp_started;
+        if (worked_seconds_i64 < 0) {
+            return error.NegativeWorktime;
+        }
+
+        const spent: Ticket.TimeSpent.Seconds = @intCast(worked_seconds_i64);
+
+        // TODO: Check if ticket actually exists.
+        // TODO(histroy): Save the start/end times in a separate structure.
+
+        var allslice = self.ticket_time_spent.slice();
+
+        for (allslice.items(.ticket), allslice.items(.person), 0..) |t, p, i| {
+            if (t == ticket and p == person) {
+                var time = &allslice.items(.time)[i];
+                std.log.debug("logWork: found entry for t={}, p={}. oldSeconds={}, newSeconds={}", .{
+                    ticket, person, time.spent, time.spent + spent,
+                });
+                time.spent += spent;
+                break;
+            }
+        } else {
+            // We didn't find an entry matchin the ticket-person.
+            try self.ticket_time_spent.append(self.alloc, .{
+                .ticket = ticket,
+                .person = person,
+                .time = .{ .spent = spent },
+            });
+            std.log.debug("logWork: added new entry for t={}, p={}, seconds={}", .{ ticket, person, spent });
+        }
+    }
+    /// Give estimate
+    pub fn setEstimate(
+        self: *Self,
+        ticket: Ticket.Key,
+        person: Ticket.Person,
+        estimate: Ticket.TimeSpent.Seconds,
+    ) !void {
+        // TODO: Check if ticket actually exists.
+        // TODO(histroy): Save the start/end times in a separate structure.
+
+        var allslice = self.ticket_time_spent.slice();
+
+        for (allslice.items(.ticket), allslice.items(.person), 0..) |t, p, i| {
+            if (t == ticket and p == person) {
+                var time = &allslice.items(.time)[i];
+                std.log.debug("setEstimate: found entry for t={}, p={}. e={}, new_e={}", .{
+                    ticket, person, time.estimate, time.estimate + estimate,
+                });
+                time.estimate += estimate;
+                break;
+            }
+        } else {
+            // We didn't find an entry matchin the ticket-person.
+            try self.ticket_time_spent.append(self.alloc, .{
+                .ticket = ticket,
+                .person = person,
+                .time = .{ .estimate = estimate },
+            });
+            std.log.debug("setEstimate: added new entry for t={}, p={}, e={}", .{
+                ticket,
+                person,
+                estimate,
+            });
+        }
+    }
 };
 
 pub fn printChildrenGraph(ticket_store: *const TicketStore, alloc: Allocator) void {
@@ -603,7 +687,7 @@ pub fn printChildrenGraph(ticket_store: *const TicketStore, alloc: Allocator) vo
 
     for (ticket_store.tickets.items(.key)) |key_parent| {
         std.debug.print("{} -> ", .{key_parent});
-        const children = ticket_store.childrenAlloc(key_parent, alloc, 8) catch unreachable;
+        const children = ticket_store.childrenAlloc(key_parent, alloc, null) catch unreachable;
         defer alloc.free(children);
 
         for (children) |c| {

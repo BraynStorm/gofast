@@ -50,7 +50,7 @@ fn init_gofast(gofast: *Gofast) !void {
             try SString.fromSlice("In Progress", alloc),
             try SString.fromSlice("Done", alloc),
         });
-        try Giberish.initGiberish(6000, gofast, alloc);
+        try Giberish.initGiberish(60, 5, gofast, alloc);
         const file = try cwd.createFile(filename, .{
             .exclusive = true,
             .read = false,
@@ -106,6 +106,8 @@ pub fn main() !void {
     router.post("/api/init", apiGetInit, .{});
     router.post("/api/tickets", apiPostTicket, .{});
     router.delete("/api/ticket/:key", apiDeleteTicket, .{});
+    router.patch("/api/ticket/:key", apiPatchTicket, .{});
+    router.patch("/api/ticket/:key/work/:person", apiPatchTicketWork, .{});
 
     //
     // END OF ENDPOINTS
@@ -157,29 +159,29 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
             const log = std.log.scoped(.static);
 
             const url_prefix = endpoint[0 .. endpoint.len - 1];
-            debug(log, .{ .url_prefix = url_prefix });
+            // debug(log, .{ .url_prefix = url_prefix });
 
             // => "/static/x/y/z.ext"
             const url_path = req.url.path;
-            debug(log, .{ .url_path = url_path });
+            // debug(log, .{ .url_path = url_path });
 
             // => ./static/
             const path_prefix = switch (relative_path[0]) {
                 '/', '\\' => relative_path[1..],
                 else => relative_path[0..],
             };
-            debug(log, .{ .path_prefix = path_prefix });
+            // debug(log, .{ .path_prefix = path_prefix });
 
             // Cut the prefix, "x/y/./z.ext"
             const relative = url_path[url_prefix.len..];
-            debug(log, .{ .relative = relative });
+            // debug(log, .{ .relative = relative });
 
             try ensureNoDotDot(relative);
 
             // Reuse some spare space for path concatenation.
             var small_buf = std.heap.FixedBufferAllocator.init(req.spare);
             const small_alloc = small_buf.allocator();
-            log.debug("simpleStaticFiles: buffer size {}B", .{req.spare.len});
+            // log.debug("simpleStaticFiles: buffer size {}B", .{req.spare.len});
 
             const extra_slash: u1 = switch (path_prefix[path_prefix.len - 1]) {
                 // Slash is already there?
@@ -226,6 +228,7 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
             if (std.mem.eql(u8, "js", path_extension) or std.mem.eql(u8, "mjs", path_extension)) {
                 res.header("Content-Type", "application/javascript");
             }
+            std.log.info("GET {s}", .{url_path});
             sendStaticFile(
                 small_alloc,
                 path_buf.items,
@@ -310,10 +313,12 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
 
     const alloc = ALLOC;
     const tickets = gofast.tickets;
+    const time_spent = tickets.ticket_time_spent;
     const ticket_slice = tickets.tickets.slice();
+    const time_spent_slice = time_spent.slice();
     const len = tickets.tickets.len;
 
-    std.log.info("GET  /api/tickets | Result: {} ticket(s).", .{len});
+    std.log.info("GET  /api/tickets | {} ticket(s).", .{len});
 
     const titles = try sstringArrayToStringArray(alloc, ticket_slice.items(.title));
     defer alloc.free(titles);
@@ -330,6 +335,15 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
     const name_statuses = try sstringArrayToStringArray(alloc, tickets.name_statuses.items);
     defer alloc.free(name_statuses);
 
+    var t_estimated = try alloc.alloc(Ticket.TimeSpent.Seconds, time_spent.len);
+    defer alloc.free(t_estimated);
+    var t_spent = try alloc.alloc(Ticket.TimeSpent.Seconds, time_spent.len);
+    defer alloc.free(t_spent);
+    for (time_spent_slice.items(.time), 0..) |tt, i| {
+        t_estimated[i] = tt.estimate;
+        t_spent[i] = tt.spent;
+    }
+
     {
         gofast.lock.lockShared();
         defer gofast.lock.unlockShared();
@@ -343,13 +357,22 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
             .name_priorities = name_priorities,
             .name_statuses = name_statuses,
             // arrays
-            .keys = ticket_slice.items(.key),
-            .parents = ticket_slice.items(.parent),
-            .titles = titles,
-            .descriptions = descriptions,
-            .types = ticket_slice.items(.type),
-            .priorities = ticket_slice.items(.priority),
-            .statuses = ticket_slice.items(.status),
+            .tickets = .{
+                .keys = ticket_slice.items(.key),
+                .parents = ticket_slice.items(.parent),
+                .titles = titles,
+                .descriptions = descriptions,
+                .types = ticket_slice.items(.type),
+                .priorities = ticket_slice.items(.priority),
+                .statuses = ticket_slice.items(.status),
+            },
+            // multiple arrays
+            .ticket_time = .{
+                .tickets = time_spent_slice.items(.ticket),
+                .people = time_spent_slice.items(.person),
+                .estimates = t_estimated,
+                .spent = t_spent,
+            },
         }, .{
             .whitespace = .minified,
         });
@@ -431,7 +454,42 @@ fn apiDeleteTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !
         return error.NoKey;
     }
 }
+fn apiPatchTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void {
+    const key_str = req.param("key") orelse return error.NoKey;
+    const key: Ticket.Key = try std.fmt.parseInt(Ticket.Key, key_str, 10);
 
+    var maybe_json = try req.jsonObject();
+    if (maybe_json) |*json| {
+        defer json.deinit();
+
+        if (json.count() > 0) {
+            gofast.lock.lock();
+            defer gofast.lock.unlock();
+
+            try gofast.updateTicket(key, .{
+                .type = if (json.get("type")) |v| @intCast(v.integer) else null,
+                .priority = if (json.get("priority")) |v| @intCast(v.integer) else null,
+                .status = if (json.get("status")) |v| @intCast(v.integer) else null,
+            });
+        }
+        res.status = 200;
+    }
+}
+fn apiPatchTicketWork(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void {
+    const key_str = req.param("key") orelse return error.NoKey;
+    const key: Ticket.Key = try std.fmt.parseInt(Ticket.Key, key_str, 10);
+    const person_str = req.param("person") orelse return error.NoPerson;
+    const person: Ticket.Person = try std.fmt.parseInt(Ticket.Person, person_str, 10);
+
+    var maybe_json = try req.jsonObject();
+    if (maybe_json) |*json| {
+        const t_started = if (json.get("timestamp_started")) |s| s.integer else 0;
+        const t_ended = if (json.get("timestamp_ended")) |s| s.integer else 0;
+
+        try gofast.logWork(key, person, t_started, t_ended);
+        res.status = 200;
+    }
+}
 // =============================================================================
 // Helpers
 // =============================================================================
