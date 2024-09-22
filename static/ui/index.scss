@@ -1,0 +1,293 @@
+/*  Colors  */
+$c1: #F5F9E9; //Ivory          
+$c2: #F9DEC9; //Champagne pink 
+$c3: #DC6504; //Cocoa Brown    
+$c4: #9D4B43; //Chestnut       
+$c5: #14110F; //Smoky Black    
+
+$insetRound: 10px;
+$insetHeight: 2.5em;
+$scrollPastEnd : 5em;
+
+@font-face {
+  font-family: 'FQ Italic';
+  font-style: normal;
+  font-weight: normal;
+  src: local('Friz Quadrata Std Italic'), url('/static/ui/friz-quadrata-std-italic-587033b2c95df.woff') format('woff');
+}
+
+
+@font-face {
+  font-family: 'FQ';
+  font-style: normal;
+  font-weight: normal;
+  src: local('Friz Quadrata Std Medium'), url('/static/ui/friz-quadrata-std-medium-5870338ec7ef8.woff') format('woff');
+}
+
+
+@font-face {
+  font-family: 'FQ Bold';
+  font-style: normal;
+  font-weight: normal;
+  src: local('Friz Quadrata Std Bold'), url('/static/ui/friz-quadrata-std-bold-587034a220f9f.woff') format('woff');
+}
+
+
+@font-face {
+  font-family: 'FQ Bold Italic';
+  font-style: normal;
+  font-weight: normal;
+  src: local('Friz Quadrata Std Bold Italic'), url('/static/ui/friz-quadrata-std-bold-italic-587033d6d4298.woff') format('woff');
+}
+
+body,
+html {
+  margin: 0;
+  font-size: 14px;
+}
+
+body {
+  font-family: 'FQ', 'Roboto', Arial, sans-serif;
+  background: $c1;
+}
+
+/*******************************************************************************
+ ***  Inset  ***
+ *******************************************************************************/
+nav.inset {
+  height: $insetHeight;
+  padding: 4px 4px 4px 4px;
+
+  border-bottom-left-radius: $insetRound;
+  border-bottom-right-radius: $insetRound;
+  box-sizing: border-box;
+
+  background-color: $c1;
+  box-shadow: 0 0 3px 1px $c3;
+
+  display: flex;
+  justify-content: stretch;
+  align-items: stretch;
+
+  width: 94%;
+
+  position: sticky;
+  top: 0;
+  left: 5%;
+
+  span {
+    align-self: center;
+    margin: 0 1em 0 1em;
+  }
+
+  input {
+    $border: 1px solid black;
+
+    display: block;
+    flex: 1;
+    border: $border;
+    border-right: 0;
+
+    &.nt_key {
+      flex: 0;
+      border-top-left-radius: $insetRound;
+      border-bottom-left-radius: $insetRound;
+      background: white;
+    }
+
+    &:first-child {
+      border-top-left-radius: $insetRound;
+      border-bottom-left-radius: $insetRound;
+    }
+
+    &:nth-last-child(2) {
+      border-top-right-radius: $insetRound;
+      border-bottom-right-radius: $insetRound;
+      border-right: $border;
+    }
+  }
+
+  button {
+    margin-left: 1em;
+  }
+}
+
+/*******************************************************************************
+ ***  Aside  ***
+ *******************************************************************************/
+
+aside {
+  $border: 0;
+  $rounding: 20px;
+
+  width: 40em;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 1em;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  box-sizing: border-box;
+
+  background-color: $c1;
+  box-shadow: 0 0 4px 1px $c3;
+  border-top: $border;
+  border-bottom: $border;
+
+  &.hidden {
+    width: 0em;
+    padding: 0.2em
+  }
+
+  input {
+    font-family: "FQ";
+  }
+
+  &.left {
+    left: 0;
+    margin-right: 1em;
+    border-top-right-radius: $rounding;
+    border-bottom-right-radius: $rounding;
+    border-right: $border;
+  }
+
+  &.right {
+    right: 0;
+    margin-left: 1em;
+    border-top-left-radius: $rounding;
+    border-bottom-left-radius: $rounding;
+    border-left: $border;
+  }
+
+  &>textarea.description {
+    font-family: "FQ";
+  }
+
+}
+
+/*******************************************************************************
+ ***  Main  ***
+ *******************************************************************************/
+
+main {
+  display: flex;
+  flex-direction: row;
+  justify-content: stretch;
+  height: 100vh;
+  overflow: hidden;
+
+  section {
+    display: flex;
+    flex-direction: column;
+    overflow: scroll;
+  }
+}
+
+/*******************************************************************************
+****     THE TABLE     *********************************************************
+*******************************************************************************/
+.ticket-table {
+  $border: 1px solid #000;
+  margin-bottom: 4em;
+
+  // I keep forgetting this...
+  border-collapse: collapse;
+
+  &>tr {
+    &:first-child>td {
+      border-top: $border;
+    }
+
+    &>td {
+      border-bottom: $border;
+
+      box-sizing: border-box;
+      padding: 2px 5px;
+
+      &>img {
+        vertical-align: middle;
+        width: 1.7em;
+      }
+
+      &:nth-child(1) {
+        line-height: 1.5em;
+      }
+
+      &:nth-child(1),
+      &:nth-child(3),
+      &:nth-child(5),
+      &:nth-child(6),
+      &:nth-child(7) {
+        text-wrap: nowrap;
+
+      }
+
+      &>a.ticket {
+        display: block;
+        border: 2px solid black;
+        border-radius: 12px;
+        padding: 5px;
+      }
+    }
+
+
+  }
+}
+
+.ticket-table>tr>td
+
+/*******************************************************************************
+ ***     Tickets     *** 
+ ******************************************************************************/
+.ticket {
+  .title {
+    // max-width: 40em;
+    font-size: 1.1em;
+  }
+
+  .description {}
+}
+
+
+button.btn-cross {
+  background-color: transparent;
+  background-image: url('/static/ui/button_cross.svg');
+  background-repeat: no-repeat no-repeat;
+  background-size: 100% 100%;
+  padding: 0;
+  border: 0;
+  width: 2em;
+  aspect-ratio: 1;
+  cursor: pointer;
+
+  &:hover {
+    background-image: url('/static/ui/button_cross_hover.svg');
+  }
+
+  &:active {
+    background-image: url('/static/ui/button_cross.svg');
+    background-size: -100% -100%;
+  }
+}
+
+button.btn-plus {
+  background-color: transparent;
+  background-image: url('/static/ui/button_plus.svg');
+  background-repeat: no-repeat no-repeat;
+  background-size: 100% 100%;
+  padding: 0;
+  border: 0;
+  width: 2em;
+  aspect-ratio: 1;
+  cursor: pointer;
+
+  &:hover {
+    background-image: url('/static/ui/button_plus_hover.svg');
+  }
+
+  &:active {
+    background-image: url('/static/ui/button_plus.svg');
+    background-size: -100% -100%;
+  }
+}

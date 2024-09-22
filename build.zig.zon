@@ -1,0 +1,28 @@
+.{
+    .name = "gofast",
+    .version = "0.0.0",
+    .minimum_zig_version = "0.13.0",
+    .dependencies = .{
+        .httpz = .{
+            .url = "git+https://github.com/karlseguin/http.zig?ref=zig-0.13#48573688344d592c6db7a4fe3fc35ddbc4510b40",
+            .hash = "12207b5b1b9ce64a4827519bad24511a485c3ffd2496d9d79ffe8255184e35868941",
+        },
+        // .sqlite3 = .{
+        //     .url = "https://www.sqlite.org/2024/sqlite-amalgamation-3460100.zip",
+        //     .hash = "12206bc219bf56b927469c7d43f53c23fe2801c8158800f8613a783956998b7fc37f",
+        // },
+        // .zig_tracy = .{
+        //     .url = "git+https://github.com/nektro/zig-tracy?ref=master#8b9da2efba6937b66085a52f7281c59293ffe985",
+        //     .hash = "12206bc219bf56b927469c7d43f53c23fe2801c8158800f8613a783951998b7fc37f",
+        // },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "static",
+        "package.json",
+        "package-lock.json",
+        "README.md",
+    },
+}

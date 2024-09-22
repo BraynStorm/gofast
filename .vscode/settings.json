@@ -1,0 +1,31 @@
+{
+    "[html][css][sass][scss]": {
+        "editor.indentSize": 2,
+        "editor.tabSize": 2
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.zig-cache": true,
+        "**/zig-out": true,
+        "gofast-*.zip": true,
+        "gofast-*.7z": true,
+    },
+    "cSpell.words": [
+        "GOFAST"
+    ],
+    "triggerTaskOnSave.delay": 0,
+    "triggerTaskOnSave.restart": true,
+    "triggerTaskOnSave.showStatusBarToggle": true,
+    "triggerTaskOnSave.showBusyIndicator": true,
+    "triggerTaskOnSave.resultIndicatorResetTimeout": 10,
+    "triggerTaskOnSave.tasks": {
+        "zig build run": [
+            "src/**/*.zig",
+        ],
+    }
+}

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32.880943mm"
+   height="33.101849mm"
+   viewBox="0 0 32.880943 33.101849"
+   version="1.1"
+   id="svg1"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient20">
+      <stop
+         style="stop-color:#e79df9;stop-opacity:1;"
+         offset="0"
+         id="stop20" />
+      <stop
+         style="stop-color:#b05ccc;stop-opacity:1;"
+         offset="0.51646453"
+         id="stop22" />
+      <stop
+         style="stop-color:#40005c;stop-opacity:1;"
+         offset="1"
+         id="stop21" />
+    </linearGradient>
+    <radialGradient
+       xlink:href="#linearGradient20"
+       id="radialGradient21"
+       cx="74.622643"
+       cy="-24.840443"
+       fx="74.622643"
+       fy="-24.840443"
+       r="16.440472"
+       gradientTransform="matrix(1,0,0,1.0067183,0,0.16688562)"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <g
+     id="layer13"
+     transform="translate(-58.55953,-8.4490748)">
+    <path
+       style="display:inline;fill:url(#radialGradient21);stroke:#000000;stroke-width:0.42254;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       id="path20"
+       d="m 89.557923,-16.650233 c -2.081034,3.603004 -5.602012,-2.772917 -9.031301,-0.418749 -3.429288,2.354168 1.103791,7.9044975 -3.004117,8.5294794 -4.107907,0.6249819 -1.378563,-6.0353374 -5.354011,-7.2578654 -3.975448,-1.222528 -5.460343,5.8277615 -8.512173,2.998868 -3.051829,-2.828893 3.839218,-4.845932 2.315929,-8.72249 -1.523289,-3.876558 -7.897093,-0.603757 -7.567399,-4.75168 0.329695,-4.147923 6.164042,-0.0521 8.239722,-3.661424 2.07568,-3.609326 -4.428566,-6.592271 -0.996366,-8.945078 3.4322,-2.352807 3.843059,4.817324 7.95523,4.18689 4.112171,-0.630434 2.431808,-7.573135 6.403855,-6.349435 3.972048,1.2237 -1.329217,5.977904 1.708584,8.821402 3.0378,2.843499 7.42783,-2.809158 8.934257,1.074084 1.506427,3.883242 -5.61503,2.667639 -5.928744,6.817446 -0.313714,4.149806 6.917569,4.075547 4.836534,7.678552 z"
+       transform="translate(0.37735923,49.840441)" />
+  </g>
+</svg>
