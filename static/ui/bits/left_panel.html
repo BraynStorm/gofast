@@ -1,0 +1,66 @@
+
+<aside class="left edit"
+  x-show="left_panel.mode === 'edit'"
+  x-transition:enter="enter"
+  x-transition:enter-end="enterend"
+  x-transition:enter-start="enterstart"
+  x-transition:leave="leave"
+  x-transition:leave-end="leaveend"
+  x-transition:leave-start="leavestart"
+  x-data="{ e_desc: false }">
+  <div class="controls">
+    <button @click="stop_edit_ticket"
+      class="btn-cross text">Cancel</button>
+    <button @click="stop_edit_ticket"
+      class="btn-checkmark text">Save</button>
+  </div>
+  <span>Edit:</span>
+  <span x-text="display_key(m_et.key)" class="et_key"></span>
+  <input class="et_title"
+    name="et_title"
+    x-model="m_et.title" />
+  <div>
+    <select class="et_priority"
+      x-model="m_et.priority">
+      <template x-for="(priority, id) in names.priority" :key="id">
+        <option :selected="m_et.priority === id"
+          :value="id"
+          x-text="priority">
+        </option>
+      </template>
+    </select>
+    <select class="et_type" x-model="m_et.type">
+      <template x-for="(type, id) in names.type" :key="id">
+        <option :value="id" x-text="type"></option>
+      </template>
+    </select>
+    <select class="et_status" x-model="m_et.status">
+      <template x-for="(status, id) in names.status" :key="id">
+        <option :value="id" x-text="status"></option>
+      </template>
+    </select>
+    <select class="et_parent" x-model="m_et.parent">
+      <option value>No Parent</option>
+      <template x-for="(t, key) in tickets" :key="key">
+        <option
+          :value="key"
+          x-text="display_key(key) + ': ' + t.title.substring(0, 14) + '...'"></option>
+      </template>
+    </select>
+  </div>
+  <!-- Editing the description -->
+  <div x-show="e_desc" class="description md-editor">
+    <textarea
+      placeholder="Description..."
+      x-model="m_et.description"></textarea>
+    <div class="controls">
+      <button @click="e_desc = false"
+        class="btn-cross text">Cancel</button>
+      <button @click="e_desc = false"
+        class="btn-checkmark text">Save</button>
+    </div>
+  </div>
+  <div x-show="!e_desc" @click="e_desc = !e_desc"
+    x-html="simpleMarkdown(m_et.description)">
+  </div>
+</aside>

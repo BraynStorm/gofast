@@ -1,0 +1,91 @@
+<section>
+  <template x-if="inset.mode === 'create'">
+    <!-- Make new ticket -->
+    <nav class="inset">
+      <span>New:</span>
+      <!-- TODO: Make an expand button to enlarge the inset. -->
+      <input :value="display_key(likely_next_ticket_number())"
+        class="nt_key" disabled />
+      <input placeholder="Title..." class="nt_title"
+        x-model="m_nt.title" />
+      <input placeholder="Description..." class="nt_title"
+        x-model="m_nt.description" />
+      <!-- TODO: Add a 'search' field/dropdown combo thing for finding parents. -->
+      <button @click="ui_create_ticket" class="btn-plus"></button>
+    </nav>
+  </template>
+  <template x-if="inset.mode === 'edit'">
+    <nav class="inset">
+      <span>Edit:</span>
+      <input :value="display_key(m_et.key)"
+        class="nt_key"
+        disabled
+        name="nt_key" />
+      <input class="nt_title"
+        name="nt_title"
+        placeholder="Title..."
+        x-model="m_et.title" />
+      <input class="nt_title"
+        name="nt_description"
+        placeholder="Description..."
+        x-model="m_et.description" />
+      <button @click="inset.mode = 'create'" class="btn-cross"></button>
+    </nav>
+  </template>
+
+  <h2>All Tickets:</h2>
+  <table class="ticket-table">
+    <template
+      x-for="ti in parseInt(Object.keys(tickets).length)"
+      :key="tickets[ti].key">
+      <tr :id="display_key(t.key)"
+        @click="edit_ticket(t.key)"
+        @mouseover="ui_hover_ticket($event, t.key)"
+        @mousemove="ui_hover_ticket($event, t.key)"
+        @mouseleave="ui_hover_ticket($event, 0)"
+        class="ticket"
+        :class="t.key == m_table.highlight_key ? 'highlight': ''"
+        x-data="{ t: tickets[ti] }">
+        <td>
+          <img :src="type_icon(t.type)" :title="type_name(t.type)" />
+          <!-- <template x-if="t.parent !== null">
+            <a :href="'##'+t.parent"
+              class="ticket parent" x-text="display_key(t.parent)">
+            </a>
+          </template>
+          <template x-if="t.parent !== null">
+            <span x-text="ARROW"></span>
+          </template> -->
+          <a class="ticket" :href="display_key(t.key)"
+            x-text="display_key(t.key)"></a>
+        </td>
+        <td>
+          <img :src="priority_icon(t.priority)"
+            :title="priority_name(t.priority)" />
+        </td>
+        <td x-data="progress(t.key)">
+          <!-- Progress bar -->
+          <div class="progress-bar"
+            x-data="{ p: (estimate > 0 ? spent/estimate : 0), left: estimate - spent}"
+            x-text="`${fmt_time(left)} (${parseInt(Math.min(p, 1)*100)}%)`">
+
+          </div>
+        </td>
+        <td x-text="status_name(t.status)"></td>
+        <td class="title" x-text="t.title"></td>
+        <!-- <td class="desciption" x-text="t.description"></td> -->
+        <td>
+          <button class="btn-cross"
+            @click="ui_delete_ticket(t.key)"></button>
+        </td>
+      </tr>
+    </template>
+  </table>
+</section>
+
+<template x-if="right_panel.mode === ''">
+  <aside class="right hidden"></aside>
+</template>
+<template x-if="right_panel.mode === 'edit'">
+  <aside class="right edit"></aside>
+</template>

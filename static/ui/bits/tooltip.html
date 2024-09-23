@@ -1,0 +1,9 @@
+<template x-if="m_tooltip.key">
+  <div id="tooltip" class="tooltip" x-data="{ t: tickets[m_tooltip.key] }"
+    :style="`left: ${m_tooltip.position[0]}px; top: ${m_tooltip.position[1]+24}px;`">
+    <img :src="type_icon(t.type)" :title="type_name(t.type)" />
+    <span x-text="display_key_with_parent(m_tooltip.key)"></span>
+    <span x-text="t.title"></span>
+    <span x-text="t.description"></span>
+  </div>
+</template>
