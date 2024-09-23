@@ -1,7 +1,11 @@
+const ARROW = ' ➤ ';
+
+
 function display_key(key, max_key) {
-    const padding = parseInt(Math.ceil(Math.log10(max_key)));
+    const padding = parseInt(Math.ceil(Math.log10(max_key + 1)));
     return '#' + `${key}`.padStart(padding, '0');
 }
+
 
 function fmt_time(t) {
     const seconds = Number(t);
@@ -257,6 +261,15 @@ document.addEventListener("alpine:init", () => {
         },
         display_key(key) {
             return display_key(key, this.max_key);
+        },
+        display_key_with_parent(key) {
+            const parent = this.tickets[key].parent;
+            let s = "";
+            if (parent) {
+                s = this.display_key_with_parent(parent) + ARROW;
+            }
+
+            return s + display_key(key);
         },
         priority_icon(priority) {
             /*TODO:

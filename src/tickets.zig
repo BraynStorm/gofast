@@ -636,7 +636,7 @@ pub const TicketStore = struct {
                 break;
             }
         } else {
-            // We didn't find an entry matchin the ticket-person.
+            // We didn't find an entry matching the ticket-person.
             try self.ticket_time_spent.append(self.alloc, .{
                 .ticket = ticket,
                 .person = person,

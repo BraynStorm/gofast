@@ -163,22 +163,21 @@
               x-data="{ t: tickets[ti] }">
               <td>
                 <img
-                  :alt="name_types[t.type]"
                   :src="`/static/ui/icons/type_${t.type}.svg`"
                   :title="name_types[t.type]" />
-                <template x-if="t.parent !== null">
+                <!-- <template x-if="t.parent !== null">
                   <a :href="'##'+t.parent"
                     class="ticket parent" x-text="display_key(t.parent)">
                   </a>
                 </template>
                 <template x-if="t.parent !== null">
-                  <span>➤</span>
-                </template>
+                  <span x-text="ARROW"></span>
+                </template> -->
                 <a class="ticket" :href="display_key(t.key)"
                   x-text="display_key(t.key)"></a>
               </td>
               <td>
-                <img :alt="name_priorities[t.priority]"
+                <img
                   :src="priority_icon(t.priority)"
                   :title="name_priorities[t.priority]"
                   width="32" />
@@ -218,15 +217,9 @@
         }"
         :style="`left: ${m_tooltip.position[0]}px; top: ${m_tooltip.position[1]+24}px;`">
         <img
-          :alt="name_types[t.type]"
           :src="`/static/ui/icons/type_${t.type}.svg`"
           :title="name_types[t.type]" />
-        <template x-if="t.parent !== null">
-          <a :href="'##'+t.parent"
-            class="ticket parent" x-text="display_key(t.parent)">
-          </a>
-        </template>
-        <span x-text="display_key(m_tooltip.key)"></span>
+        <span x-text="display_key_with_parent(m_tooltip.key)"></span>
         <span x-text="tickets[m_tooltip.key].title"></span>
         <span x-text="tickets[m_tooltip.key].description"></span>
       </div>
