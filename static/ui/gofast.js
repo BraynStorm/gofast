@@ -121,7 +121,7 @@ document.addEventListener("alpine:init", () => {
                 title: title,
                 description: description,
                 parent: maybe_parent,
-                priority: 0, // TODO: Add dropdown for priority/order.
+                priority: 0, // TODO: Add dropdown for priority.
                 type: 0, // TODO: Add dropdown for types.
             };
             const data = { ...ticket };

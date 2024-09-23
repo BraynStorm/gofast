@@ -6,6 +6,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <link href="/static/ui/icons/favicon.svg" rel="icon" />
     <link href="/static/ui/index.css" rel="stylesheet" />
+    <script src="/static/ui/md.js"></script>
 
     <!-- ROBOTO -->
     <!-- <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,7 +41,14 @@
         x-transition:enter-start="enterstart"
         x-transition:leave="leave"
         x-transition:leave-end="leaveend"
-        x-transition:leave-start="leavestart">
+        x-transition:leave-start="leavestart"
+        x-data="{
+          e_desc: false,
+        }">
+        <div class="controls">
+          <button @click="stop_edit_ticket" class="btn-cross text">Cancel</button>
+          <button @click="stop_edit_ticket" class="btn-checkmark text">Save</button>
+        </div>
         <span>Edit:</span>
         <span x-text="display_key(m_et.key)" class="et_key"></span>
         <input class="et_title"
@@ -75,13 +83,22 @@
             </template>
           </select>
         </div>
-        <textarea class="description"
-          name="et_description"
-          placeholder="Description..."
-          x-model="m_et.description"></textarea>
-        <button @click="stop_edit_ticket" class="btn-cross"></button>
-        <button @click="stop_edit_ticket" class="btn-checkmark"></button>
+        <!-- Editing the description -->
+        <div x-show="e_desc" class="description md-editor" >
+          <textarea 
+            name="et_description"
+            placeholder="Description..."
+            x-model="m_et.description"></textarea>
+          <div class="controls">
+            <button @click="e_desc = false" class="btn-cross text">Cancel</button>
+            <button @click="e_desc = false" class="btn-checkmark text">Save</button>
+          </div>
+        </div>
+        <div x-show="!e_desc" @click="e_desc = !e_desc"
+          x-html="simpleMarkdown(m_et.description)">
+        </div>
       </aside>
+
       <!-- <template x-if="left_panel.mode === ''">
           <aside class="left hidden"></aside>
         </template> -->
