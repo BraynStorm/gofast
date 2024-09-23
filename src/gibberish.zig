@@ -225,8 +225,9 @@ pub fn initGiberish(
                 n_people,
             );
 
-            const estimated = std.rand.intRangeAtMost(random, Ticket.TimeSpent.Seconds, 1, 60 * 60);
-            const worktime = std.rand.intRangeAtMost(random, Ticket.TimeSpent.Seconds, 1, 60 * 60);
+            // Generate them in minutes so we don't have to deal with seconds
+            const estimated = std.rand.intRangeAtMost(random, Ticket.TimeSpent.Seconds, 1, 60 * 60) * 60;
+            const worktime = std.rand.intRangeAtMost(random, Ticket.TimeSpent.Seconds, 1, 60 * 60) * 60;
             const time_started = std.rand.intRangeAtMost(random, i64, 1727000000, std.time.timestamp());
 
             try gofast.setEstimate(key, person, estimated);

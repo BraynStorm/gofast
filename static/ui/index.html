@@ -46,8 +46,10 @@
           e_desc: false,
         }">
         <div class="controls">
-          <button @click="stop_edit_ticket" class="btn-cross text">Cancel</button>
-          <button @click="stop_edit_ticket" class="btn-checkmark text">Save</button>
+          <button @click="stop_edit_ticket"
+            class="btn-cross text">Cancel</button>
+          <button @click="stop_edit_ticket"
+            class="btn-checkmark text">Save</button>
         </div>
         <span>Edit:</span>
         <span x-text="display_key(m_et.key)" class="et_key"></span>
@@ -84,14 +86,16 @@
           </select>
         </div>
         <!-- Editing the description -->
-        <div x-show="e_desc" class="description md-editor" >
-          <textarea 
+        <div x-show="e_desc" class="description md-editor">
+          <textarea
             name="et_description"
             placeholder="Description..."
             x-model="m_et.description"></textarea>
           <div class="controls">
-            <button @click="e_desc = false" class="btn-cross text">Cancel</button>
-            <button @click="e_desc = false" class="btn-checkmark text">Save</button>
+            <button @click="e_desc = false"
+              class="btn-cross text">Cancel</button>
+            <button @click="e_desc = false"
+              class="btn-checkmark text">Save</button>
           </div>
         </div>
         <div x-show="!e_desc" @click="e_desc = !e_desc"
@@ -145,8 +149,6 @@
         </template>
 
         <h2>All Tickets:</h2>
-        <span
-          x-text="`#tickets ${parseInt(Object.keys(tickets).length)}`"></span>
         <table class="ticket-table">
           <template
             x-for="ti in parseInt(Object.keys(tickets).length)"
@@ -180,6 +182,14 @@
                   :src="priority_icon(t.priority)"
                   :title="name_priorities[t.priority]"
                   width="32" />
+              </td>
+              <td x-data="progress(t.key)">
+                <!-- Progress bar -->
+                <div class="progress-bar"
+                  x-data="{ p: (estimate > 0 ? spent/estimate : 0), left: estimate - spent}"
+                  x-text="`${fmt_time(left)} (${parseInt(Math.min(p, 1)*100)}%)`">
+
+                </div>
               </td>
               <td x-text="name_statuses[t.status]"></td>
               <td class="title" x-text="t.title"></td>

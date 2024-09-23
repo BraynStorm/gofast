@@ -3,9 +3,27 @@ function display_key(key, max_key) {
     return '#' + `${key}`.padStart(padding, '0');
 }
 
+function fmt_time(t) {
+    const seconds = Number(t);
+    const d = Math.floor(seconds / (3600 * 8));
+    const h = Math.floor(seconds % (3600 * 8) / 3600);
+    const m = Math.floor(seconds % 3600 / 60);
+    const s = Math.floor(seconds % 60);
+
+    const dDisplay = d > 0 ? (d + "d ") : "";
+    const hDisplay = h > 0 ? (h + "h ") : "";
+    const mDisplay = m > 0 ? (m + "m ") : "";
+    const sDisplay = s > 0 ? (s + "s ") : "";
+    return (dDisplay + hDisplay + mDisplay + sDisplay).trimEnd();
+}
+
 document.addEventListener("alpine:init", () => {
     Alpine.data("GOFAST", () => ({
         tickets: {},
+        ticket_time: {
+            estimate: {},
+            spent: {},
+        },
         name_priorities: {},
         name_types: {},
         name_statuses: {},
@@ -84,6 +102,44 @@ document.addEventListener("alpine:init", () => {
                     }
                 }
                 // this.tickets = tickets;
+
+                // Load the ticket_time table.
+                {
+                    const ticket_time = r.ticket_time;
+                    console.log(ticket_time);
+                    const tickets = ticket_time.tickets;
+                    const people = ticket_time.people;
+                    const estimates = ticket_time.estimates;
+                    const spent_ = ticket_time.spent;
+
+                    const result = { estimate: {}, spent: {} };
+                    for (let i = 0; i < tickets.length; ++i) {
+                        const key = tickets[i];
+                        const person = people[i];
+                        const estimate = estimates[i];
+                        const spent = spent_[i];
+
+                        if (!(key in result.estimate)) {
+                            result.estimate[key] = {};
+                        }
+                        if (!(key in result.spent)) {
+                            result.spent[key] = {};
+                        }
+
+                        let e = result.estimate[key] || 0;
+                        let ep = e[person] || 0;
+                        ep += estimate;
+                        result.estimate[key][person] = ep;
+
+                        let s = result.spent[key] || 0;
+                        let sp = s[person] || 0;
+                        sp += spent;
+                        result.spent[key][person] = sp;
+                    }
+
+                    this.ticket_time = result;
+                }
+
                 /*TODO:
                     Implement a graph visualization of ticket relationships.
                     There are MANY useful ways to display these thing,
@@ -207,6 +263,20 @@ document.addEventListener("alpine:init", () => {
                 Map priority->image on the server.
             */
             return `/static/ui/icons/priority_${priority - 3}.svg`;
-        }
+        },
+        progress(key) {
+            const estimate = this.ticket_time.estimate[key];
+            const spent = this.ticket_time.spent[key];
+
+            let ticket_estimate = 0;
+            let ticket_spent = 0;
+            for (p in estimate) {
+                ticket_estimate += estimate[p];
+            }
+            for (p in spent) {
+                ticket_spent += spent[p];
+            }
+            return { spent: ticket_spent, estimate: ticket_estimate };
+        },
     }));
 });
