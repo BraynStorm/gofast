@@ -38,20 +38,32 @@
 
       For now, this works just fine.
     -->
-    <main id="main" x-html="
+    <div id="content" x-html="
       const text = p => p.text();
       const fetch_bit = (name) => fetch(`/static/ui/bits/${name}.html`).then(text);
       const bits = [
         fetch_bit('left_panel'),
-        fetch_bit('else'),
+        [
+          // fetch_bit('inset'),
+          fetch_bit('ticket_table'),
+        ],
         fetch_bit('tooltip'),
       ];
-      let main = '';
+      let content = '';
       for (let bit of bits) {
-        main += await bit;
+        if (Array.isArray(bit)) {
+          content += '<div class=\\fc\\>'.replace(/\\/g, String.fromCharCode(34));
+          for (let sub_bit of bit) {
+            content += await sub_bit;
+          }
+          content += '</div>';
+          continue;
+        } else {
+          content += await bit;
+        }
       }
-      return main;
+      return content;
     ">
-    </main>
+    </div>
   </body>
 </html>

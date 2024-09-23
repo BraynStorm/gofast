@@ -53,12 +53,13 @@ html {
 body {
   font-family: 'FQ', 'Roboto', Arial, sans-serif;
   background: $c1;
+  overflow: hidden;
 }
 
 /*******************************************************************************
  ***  Inset  ***
  *******************************************************************************/
-nav.inset {
+.inset {
   height: $insetHeight;
   padding: 4px 4px 4px 4px;
 
@@ -139,11 +140,6 @@ aside {
   border-top: $border;
   border-bottom: $border;
 
-  &.hidden {
-    width: 0em;
-    padding: 0.2em;
-  }
-
   &.enter {
     transition: transform 500ms;
 
@@ -215,7 +211,6 @@ div.controls {
   flex-direction: row;
   display: flex;
   justify-content: right;
-
 }
 
 div.md-editor {
@@ -244,76 +239,114 @@ div.md-editor {
  ***  Main  ***
  *******************************************************************************/
 
-main {
+div#content {
   display: flex;
   flex-direction: row;
-  justify-content: stretch;
+  justify-content: space-evenly;
   height: 100vh;
-  overflow: hidden;
 
-  section {
+  // Because :first-child was broken... had to use .fc as a class
+  &>div.fc {
+    max-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: scroll;
+    justify-content: stretch;
+    align-items: stretch;
+    margin-left: 1em;
+    margin-right: 1em;
   }
 }
 
 /*******************************************************************************
 ****     THE TABLE     *********************************************************
 *******************************************************************************/
-.ticket-table {
-  $border: 1px solid $c5;
-  margin-bottom: 4em;
+div.ticket-search {
+  display: flex;
+  flex: 1;
 
-  // I keep forgetting this...
-  border-collapse: collapse;
+  &>input[type=search] {
+    font-family: 'FQ';
+    padding: 0.25em 0.35em;
+    display: block;
+    width: auto;
+    flex: 1;
+  }
 
-  &>tr {
-    &.highlight {
-      background-color: $cDarken;
+  &>div.dropdown {
+    &>ul {
+      list-style: none;
+      margin-left: 0.1em;
+      &>li {
+        &>img {
+          width: 1em;
+          aspect-ratio: 1;
+        }
+      }
     }
+  }
+}
 
-    &:first-child>td {
-      border-top: $border;
-    }
+div.ticket-table {
+  overflow: auto;
 
-    &>td {
-      border-bottom: $border;
+  &> {
+    padding: 1em;
+  }
 
-      box-sizing: border-box;
-      padding: 2px 5px;
 
-      &>img {
-        vertical-align: middle;
-        width: 1.7em;
+  &>table {
+    $border: 1px solid $c5;
+    margin-bottom: 4em;
+
+    // I keep forgetting this...
+    border-collapse: collapse;
+
+    &>tr {
+      &.highlight {
+        background-color: $cDarken;
       }
 
-      &:nth-child(1) {
-        line-height: 1.5em;
+      &:first-child>td {
+        border-top: $border;
       }
 
-      &:nth-child(1),
-      &:nth-child(3),
-      &:nth-child(5),
-      &:nth-child(6),
-      &:nth-child(7) {
-        text-wrap: nowrap;
-      }
+      &>td {
+        border-bottom: $border;
 
+        box-sizing: border-box;
+        padding: 2px 5px;
 
-      &>a.ticket {
-        text-decoration: none;
-        color: $cLink;
-
-        &:hover {
-          text-decoration: underline;
+        &>img {
+          vertical-align: middle;
+          width: 1.7em;
         }
 
-        &:visited {}
+        &:nth-child(1) {
+          line-height: 1.5em;
+        }
+
+        &:nth-child(1),
+        &:nth-child(3),
+        &:nth-child(5),
+        &:nth-child(6),
+        &:nth-child(7) {
+          text-wrap: nowrap;
+        }
+
+
+        &>a.ticket {
+          text-decoration: none;
+          color: $cLink;
+
+          &:hover {
+            text-decoration: underline;
+          }
+
+          &:visited {}
+        }
       }
+
     }
-
-
   }
 }
 
@@ -403,7 +436,7 @@ div.tooltip {
   top: 0;
   left: 0;
 
-  overflow: scroll;
+  overflow: hidden;
 
   background: $c2;
   border: 1px solid $c5;

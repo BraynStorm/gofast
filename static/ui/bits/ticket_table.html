@@ -1,0 +1,58 @@
+<h2>All Tickets</h2>
+<div class="ticket-search">
+  <input type="search" placeholder="Search...">
+
+  <div class="dropdown" x-data="{ o: false , pr: '' }">
+    <input type="search" placeholder="Priority" @focus="o=true" :value="pr">
+    <ul x-show="o">
+      <template x-for="(name, id) in names.priority" :key="id">
+        <li @click="o=false; pr=$el.innerText.trim()" :style="`list-style-image: ${priority_icon(id)}`" >
+          <input type="checkbox">
+          <img :src="priority_icon(id)">
+          <span x-text="name"></span>
+        </li>
+      </template>
+    </ul>
+  </div>
+</div>
+<div class="ticket-table">
+  <table>
+    <template
+      x-for="ti in parseInt(Object.keys(tickets).length)"
+      :key="tickets[ti].key">
+      <tr :id="display_key(t.key)"
+        @click="edit_ticket(t.key)"
+        @mouseover="ui_hover_ticket($event, t.key)"
+        @mousemove="ui_hover_ticket($event, t.key)"
+        @mouseleave="ui_hover_ticket($event, 0)"
+        class="ticket"
+        :class="t.key == m_table.highlight_key ? 'highlight': ''"
+        x-data="{ t: tickets[ti] }">
+        <td>
+          <img :src="type_icon(t.type)" :title="type_name(t.type)" />
+          <a class="ticket" :href="display_key(t.key)"
+            x-text="display_key(t.key)"></a>
+        </td>
+        <td>
+          <img :src="priority_icon(t.priority)"
+            :title="priority_name(t.priority)" />
+        </td>
+        <td x-data="progress(t.key)">
+          <!-- Progress bar -->
+          <div class="progress-bar"
+            x-data="{ p: (estimate > 0 ? spent/estimate : 0), left: estimate - spent}"
+            x-text="`${fmt_time(left)} (${parseInt(Math.min(p, 1)*100)}%)`">
+
+          </div>
+        </td>
+        <td x-text="status_name(t.status)"></td>
+        <td class="title" x-text="t.title"></td>
+        <!-- <td class="desciption" x-text="t.description"></td> -->
+        <td>
+          <button class="btn-cross"
+            @click="ui_delete_ticket(t.key)"></button>
+        </td>
+      </tr>
+    </template>
+  </table>
+</div>

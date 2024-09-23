@@ -1,0 +1,28 @@
+<!-- DISABLED FOR NOW -->
+
+<template x-if="inset.mode === 'create'">
+  <!-- Make new ticket -->
+  <nav class="inset">
+    <span>New:</span>
+    <!-- TODO: Make an expand button to enlarge the inset. -->
+    <input :value="display_key(likely_next_ticket_number())"
+      class="nt_key" disabled />
+    <input placeholder="Title..." class="nt_title"
+      x-model="m_nt.title" />
+    <input placeholder="Description..." class="nt_title"
+      x-model="m_nt.description" />
+    <!-- TODO: Add a 'search' field/dropdown combo thing for finding parents. -->
+    <button @click="ui_create_ticket" class="btn-plus"></button>
+  </nav>
+</template>
+
+<template x-if="inset.mode === 'edit'">
+  <nav class="inset">
+    <span>Edit:</span>
+    <input :value="display_key(m_et.key)" class="nt_key" disabled />
+    <input x-model="m_et.title" class="nt_title" placeholder="Title..." />
+    <input x-model="m_et.description" class="nt_description"
+      placeholder="Description..." />
+    <button @click="inset.mode = 'create'" class="btn-cross"></button>
+  </nav>
+</template>
