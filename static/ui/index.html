@@ -57,26 +57,26 @@
           name="et_title"
           x-model="m_et.title" />
         <div>
-          <select class="et_priority" name="et_priority"
+          <select class="et_priority"
             x-model="m_et.priority">
-            <template x-for="(priority, id) in name_priorities" :key="id">
+            <template x-for="(priority, id) in names.priority" :key="id">
               <option :selected="m_et.priority === id"
                 :value="id"
                 x-text="priority">
               </option>
             </template>
           </select>
-          <select class="et_type" name="et_type" x-model="m_et.type">
-            <template x-for="(type, id) in name_types" :key="id">
+          <select class="et_type" x-model="m_et.type">
+            <template x-for="(type, id) in names.type" :key="id">
               <option :value="id" x-text="type"></option>
             </template>
           </select>
-          <select class="et_status" name="et_status" x-model="m_et.status">
-            <template x-for="(status, id) in name_statuses" :key="id">
+          <select class="et_status" x-model="m_et.status">
+            <template x-for="(status, id) in names.status" :key="id">
               <option :value="id" x-text="status"></option>
             </template>
           </select>
-          <select class="et_parent" name="et_parent" x-model="m_et.parent">
+          <select class="et_parent" x-model="m_et.parent">
             <option value>No Parent</option>
             <template x-for="(t, key) in tickets" :key="key">
               <option
@@ -88,7 +88,6 @@
         <!-- Editing the description -->
         <div x-show="e_desc" class="description md-editor">
           <textarea
-            name="et_description"
             placeholder="Description..."
             x-model="m_et.description"></textarea>
           <div class="controls">
@@ -103,10 +102,6 @@
         </div>
       </aside>
 
-      <!-- <template x-if="left_panel.mode === ''">
-          <aside class="left hidden"></aside>
-        </template> -->
-
       <section>
         <template x-if="inset.mode === 'create'">
           <!-- Make new ticket -->
@@ -114,16 +109,10 @@
             <span>New:</span>
             <!-- TODO: Make an expand button to enlarge the inset. -->
             <input :value="display_key(likely_next_ticket_number())"
-              class="nt_key"
-              disabled
-              name="nt_key" />
-            <input class="nt_title"
-              name="nt_title"
-              placeholder="Title..."
+              class="nt_key" disabled />
+            <input placeholder="Title..." class="nt_title"
               x-model="m_nt.title" />
-            <input class="nt_title"
-              name="nt_description"
-              placeholder="Description..."
+            <input placeholder="Description..." class="nt_title"
               x-model="m_nt.description" />
             <!-- TODO: Add a 'search' field/dropdown combo thing for finding parents. -->
             <button @click="ui_create_ticket" class="btn-plus"></button>
@@ -162,9 +151,7 @@
               :class="t.key == m_table.highlight_key ? 'highlight': ''"
               x-data="{ t: tickets[ti] }">
               <td>
-                <img
-                  :src="`/static/ui/icons/type_${t.type}.svg`"
-                  :title="name_types[t.type]" />
+                <img :src="type_icon(t.type)" :title="type_name(t.type)" />
                 <!-- <template x-if="t.parent !== null">
                   <a :href="'##'+t.parent"
                     class="ticket parent" x-text="display_key(t.parent)">
@@ -177,10 +164,8 @@
                   x-text="display_key(t.key)"></a>
               </td>
               <td>
-                <img
-                  :src="priority_icon(t.priority)"
-                  :title="name_priorities[t.priority]"
-                  width="32" />
+                <img :src="priority_icon(t.priority)"
+                  :title="priority_name(t.priority)" />
               </td>
               <td x-data="progress(t.key)">
                 <!-- Progress bar -->
@@ -190,12 +175,12 @@
 
                 </div>
               </td>
-              <td x-text="name_statuses[t.status]"></td>
+              <td x-text="status_name(t.status)"></td>
               <td class="title" x-text="t.title"></td>
               <!-- <td class="desciption" x-text="t.description"></td> -->
               <td>
-                <button @click="ui_delete_ticket(t.key)" class="btn-cross">
-                </button>
+                <button class="btn-cross"
+                  @click="ui_delete_ticket(t.key)"></button>
               </td>
             </tr>
           </template>
@@ -212,16 +197,12 @@
 
     <template x-if="m_tooltip.key">
       <div id="tooltip" class="tooltip"
-        x-data="{
-          t: tickets[m_tooltip.key]
-        }"
+        x-data="{ t: tickets[m_tooltip.key] }"
         :style="`left: ${m_tooltip.position[0]}px; top: ${m_tooltip.position[1]+24}px;`">
-        <img
-          :src="`/static/ui/icons/type_${t.type}.svg`"
-          :title="name_types[t.type]" />
+        <img :src="type_icon(t.type)" :title="type_name(t.type)" />
         <span x-text="display_key_with_parent(m_tooltip.key)"></span>
-        <span x-text="tickets[m_tooltip.key].title"></span>
-        <span x-text="tickets[m_tooltip.key].description"></span>
+        <span x-text="t.title"></span>
+        <span x-text="t.description"></span>
       </div>
     </template>
   </body>

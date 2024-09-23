@@ -28,9 +28,11 @@ document.addEventListener("alpine:init", () => {
             estimate: {},
             spent: {},
         },
-        name_priorities: {},
-        name_types: {},
-        name_statuses: {},
+        names: {
+            priority: [],
+            type: [],
+            status: [],
+        },
 
         max_key: 0,
 
@@ -77,9 +79,9 @@ document.addEventListener("alpine:init", () => {
             fetch("/api/tickets").then(r => r.json()).then(r => {
                 const count = r.count; // Not used yet, but shows how many elements were received.
                 const max_key = r.max_key;
-                this.name_types = r.name_types;
-                this.name_priorities = r.name_priorities;
-                this.name_statuses = r.name_statuses;
+                this.names.priority = r.name_priorities;
+                this.names.status = r.name_statuses;
+                this.names.type = r.name_types;
                 const keys = r.tickets.keys;
                 const parents = r.tickets.parents;
                 const titles = r.tickets.titles;
@@ -259,9 +261,11 @@ document.addEventListener("alpine:init", () => {
             if (this.left_panel.mode === 'edit') this.left_panel.mode = '';
             this.m_table.highlight_key = 0;
         },
+        /** `1` becomes `#001` */
         display_key(key) {
             return display_key(key, this.max_key);
         },
+        /** For ticket 1 with parent 21, returns `#021 -> #001` */
         display_key_with_parent(key) {
             const parent = this.tickets[key].parent;
             let s = "";
@@ -271,11 +275,24 @@ document.addEventListener("alpine:init", () => {
 
             return s + display_key(key);
         },
-        priority_icon(priority) {
+        /* Returns a URL of the icon for the given priority */
+        priority_icon(priority_id) {
             /*TODO:
                 Map priority->image on the server.
             */
-            return `/static/ui/icons/priority_${priority - 3}.svg`;
+            return `/static/ui/icons/priority_${priority_id - 3}.svg`;
+        },
+        type_icon(type_id) {
+            return `/static/ui/icons/type_${type_id}.svg`;
+        },
+        priority_name(priority_id) {
+            return this.names.priority[priority_id];
+        },
+        status_name(status_id) {
+            return this.names.status[status_id];
+        },
+        type_name(type_id) {
+            return this.names.type[type_id];
         },
         progress(key) {
             const estimate = this.ticket_time.estimate[key];

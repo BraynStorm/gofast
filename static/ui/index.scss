@@ -3,7 +3,11 @@ $c1: #F5F9E9; //Ivory
 $c2: #F9DEC9; //Champagne pink 
 $c3: #DC6504; //Cocoa Brown    
 $c4: #9D4B43; //Chestnut       
-$c5: #14110F; //Smoky Black    
+$c5: #14110F; //Smoky Black   
+
+$c6: #888; // [FAKE] Grayish 
+$cLink: rgb(0, 102, 204); // [FAKE]
+$cDarken: rgba(0, 0, 0, 0.1); // [FAKE]
 
 $insetRound: 10px;
 $insetHeight: 2.5em;
@@ -225,7 +229,7 @@ div.md-editor {
     height: fit-content;
     padding: 0.5em;
     border-radius: 8px;
-    border: 1px solid #888;
+    border: 1px solid $c6;
     flex: 1;
 
 
@@ -258,7 +262,7 @@ main {
 ****     THE TABLE     *********************************************************
 *******************************************************************************/
 .ticket-table {
-  $border: 1px solid #000;
+  $border: 1px solid $c5;
   margin-bottom: 4em;
 
   // I keep forgetting this...
@@ -266,7 +270,7 @@ main {
 
   &>tr {
     &.highlight {
-      background-color: rgba(0, 0, 0, 0.1);
+      background-color: $cDarken;
     }
 
     &:first-child>td {
@@ -299,7 +303,7 @@ main {
 
       &>a.ticket {
         text-decoration: none;
-        color: rgb(0, 102, 204);
+        color: $cLink;
 
         &:hover {
           text-decoration: underline;
@@ -362,7 +366,7 @@ main {
     padding-right: 1em;
     height: $h;
     line-height: $h;
-    border: 1px solid #888;
+    border: 1px solid $c6;
 
     &:hover {
       background-color: $c2;
