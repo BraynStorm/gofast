@@ -112,6 +112,7 @@ pub const TicketStore = struct {
     const Self = @This();
     const MalIndex = usize;
     const StringMap = std.ArrayListUnmanaged(SString);
+    const log = std.log.scoped(.TicketStore);
 
     const Error = error{
         NotFound,
@@ -151,7 +152,7 @@ pub const TicketStore = struct {
         }
         const t_end = std.time.nanoTimestamp();
         const took = t_end - t_start;
-        std.log.info("loadFromFile took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
+        log.info("Loading took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
     }
     fn loadStringMapV0(alloc: Allocator, reader: std.fs.File.Reader, into: *StringMap) !void {
         const n = try reader.readInt(usize, .little);
@@ -172,23 +173,23 @@ pub const TicketStore = struct {
             ss.s = try alloc.alloc(u8, len);
             errdefer ss.deinit(alloc);
             try reader.readNoEof(ss.s);
-            // std.log.debug("loadSStringSliceV0: [{}] len={}, content={s}>", .{ i, len, ss.s });
+            // log.debug("loadSStringSliceV0: [{}] len={}, content={s}>", .{ i, len, ss.s });
         }
     }
     fn loadFromV0(self: *Self, reader: std.fs.File.Reader) !void {
         try Self.loadStringMapV0(self.alloc, reader, &self.name_types);
-        std.log.debug("loadFromV0: Loaded {} name_types", .{self.name_types.items.len});
+        // log.debug("loadFromV0: Loaded {} name_types", .{self.name_types.items.len});
 
         try Self.loadStringMapV0(self.alloc, reader, &self.name_priorities);
-        std.log.debug("loadFromV0: Loaded {} name_priorities", .{self.name_priorities.items.len});
+        // log.debug("loadFromV0: Loaded {} name_priorities", .{self.name_priorities.items.len});
 
         try Self.loadStringMapV0(self.alloc, reader, &self.name_statuses);
-        std.log.debug("loadFromV0: Loaded {} name_statuses", .{self.name_statuses.items.len});
+        // log.debug("loadFromV0: Loaded {} name_statuses", .{self.name_statuses.items.len});
 
         const max_key = try reader.readInt(u32, .little);
-        std.log.debug("loadFromV0: max_key={}", .{max_key});
+        // log.debug("loadFromV0: max_key={}", .{max_key});
         const n_tickets = try reader.readInt(u32, .little);
-        std.log.debug("loadFromV0: n_tickets={}", .{n_tickets});
+        // log.debug("loadFromV0: n_tickets={}", .{n_tickets});
 
         self.max_key = max_key;
 
@@ -235,7 +236,7 @@ pub const TicketStore = struct {
 
         const n_graph_len = try reader.readInt(usize, .little);
         try self.graph_children.ensureTotalCapacity(self.alloc, n_graph_len);
-        std.log.debug("loadFromV0: n_graph_len={}", .{n_graph_len});
+        // log.debug("loadFromV0: n_graph_len={}", .{n_graph_len});
 
         // Proceed to read only the parent->children graph.
         for (0..n_graph_len) |_| {
@@ -244,7 +245,7 @@ pub const TicketStore = struct {
             for (0..n_children) |_| {
                 const child = try reader.readInt(u32, .little);
                 if (child != 0) {
-                    std.log.debug("loadFromV0: setParent({}, {})", .{ child, parent });
+                    // log.debug("loadFromV0: setParent({}, {})", .{ child, parent });
                     try self.setParent(child, parent);
                 }
             }
@@ -350,7 +351,7 @@ pub const TicketStore = struct {
         }
     }
     pub fn save(self: *const Self, writer: std.fs.File.Writer) !void {
-        std.log.debug("Saving", .{});
+        log.info("Saving", .{});
         try self.saveV0(writer);
     }
 
@@ -628,7 +629,7 @@ pub const TicketStore = struct {
         for (allslice.items(.ticket), allslice.items(.person), 0..) |t, p, i| {
             if (t == ticket and p == person) {
                 var time = &allslice.items(.time)[i];
-                std.log.debug("logWork: found entry for t={}, p={}. oldSeconds={}, newSeconds={}", .{
+                log.debug("logWork: found entry for t={}, p={}. oldSeconds={}, newSeconds={}", .{
                     ticket, person, time.spent, time.spent + spent,
                 });
                 time.spent += spent;
@@ -641,7 +642,7 @@ pub const TicketStore = struct {
                 .person = person,
                 .time = .{ .spent = spent },
             });
-            std.log.debug("logWork: added new entry for t={}, p={}, seconds={}", .{ ticket, person, spent });
+            log.debug("logWork: added new entry for t={}, p={}, seconds={}", .{ ticket, person, spent });
         }
     }
     /// Give estimate
@@ -659,7 +660,7 @@ pub const TicketStore = struct {
         for (allslice.items(.ticket), allslice.items(.person), 0..) |t, p, i| {
             if (t == ticket and p == person) {
                 var time = &allslice.items(.time)[i];
-                std.log.debug("setEstimate: found entry for t={}, p={}. e={}, new_e={}", .{
+                log.debug("setEstimate: found entry for t={}, p={}. e={}, new_e={}", .{
                     ticket, person, time.estimate, time.estimate + estimate,
                 });
                 time.estimate += estimate;
@@ -672,7 +673,7 @@ pub const TicketStore = struct {
                 .person = person,
                 .time = .{ .estimate = estimate },
             });
-            std.log.debug("setEstimate: added new entry for t={}, p={}, e={}", .{
+            log.debug("setEstimate: added new entry for t={}, p={}, e={}", .{
                 ticket,
                 person,
                 estimate,

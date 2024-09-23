@@ -6,43 +6,88 @@ const SString = @import("smallstring.zig").ShortString;
 
 const Allocator = std.mem.Allocator;
 
+const log = std.log.scoped(.Gofast);
+
 /// Gofast project system
 pub const Gofast = struct {
     /// Store the tickets in the system.
     lock: std.Thread.RwLock = .{},
     tickets: TicketStore,
+    persistance: ?std.fs.File = null,
     const Self = @This();
 
-    pub fn init(alloc: Allocator) !Gofast {
-        return Gofast{ .tickets = try TicketStore.init(alloc) };
+    /// Init the whole system, with `persistence` as a relative
+    /// path for storing/loading data from.
+    pub fn init(alloc: Allocator, persitence: ?[]const u8) !Gofast {
+        var g = Gofast{
+            .tickets = try TicketStore.init(alloc),
+        };
+
+        const cwd = std.fs.cwd();
+        if (persitence) |p| {
+            var load = true;
+            const file = cwd.openFile(p, .{ .mode = .read_write }) catch |e| blk: {
+                log.info("Failed to open {s} ({}), creating...", .{ p, e });
+                const f = try cwd.createFile(p, .{
+                    .truncate = true,
+                    .exclusive = true,
+                    .read = true,
+                });
+                load = false;
+                // Save it so it's not empty the next time.
+                try g.tickets.save(f.writer());
+                break :blk f;
+            };
+
+            if (load) {
+                log.info("Loading data from persistance {s}", .{p});
+                try g.tickets.loadFromFile(file.reader());
+            }
+
+            g.persistance = file;
+        }
+
+        return g;
     }
     pub fn deinit(self: *Self) void {
-        //TODO(bozho2):
-        //  At some point, I should move this to Gofast, instead of the TicketStore.
-        //  For now, just steal it.
+        if (self.persistance) |p| {
+            self.save() catch |e| {
+                log.err("Failed to save on deinit(). error: {}", .{e});
+            };
+            p.close();
+        }
         self.tickets.deinit();
     }
 
-    /// Create a new ticket.
-    ///
-    /// This get's called from the REST API
-    pub fn createTicket(
-        self: *Self,
+    pub fn save(self: *Self) !void {
+        if (self.persistance) |p| {
+            log.info(".save", .{});
+            try p.seekTo(0);
+            try self.tickets.save(p.writer());
+        } else {
+            return error.NoPersistance;
+        }
+    }
+
+    const CreateTicket = struct {
         title: []const u8,
         desc: []const u8,
-        parent: ?Ticket.Key,
-        priority: Ticket.Priority,
-        type_: Ticket.Type,
-        status: Ticket.Status,
-    ) !Ticket.Key {
+        parent: ?Ticket.Key = null,
+        priority: Ticket.Priority = 0,
+        type_: Ticket.Type = 0,
+        status: Ticket.Status = 0,
+    };
+
+    /// Create a new ticket, withthe provided parameters
+    pub fn createTicket(self: *Self, c: CreateTicket) !Ticket.Key {
         const alloc = self.tickets.alloc;
         return try self.tickets.addOne(
-            try SString.fromSlice(title, alloc),
-            try SString.fromSlice(desc, alloc),
-            parent,
-            priority,
-            type_,
-            status,
+            try SString.fromSlice(c.title, alloc),
+            try SString.fromSlice(c.desc, alloc),
+            c.parent,
+            c.priority,
+            c.type_,
+            c.status,
         );
     }
 
@@ -60,16 +105,11 @@ pub const Gofast = struct {
     };
     pub fn updateTicket(self: *Self, key: Ticket.Key, u: UpdateTicket) !void {
         const alloc = self.tickets.alloc;
-        var slice = self.tickets.tickets.slice();
-        const keys = slice.items(.key);
 
-        const index: usize = i: for (0..slice.len) |i| {
-            if (keys[i] == key) {
-                break :i i;
-            }
-        } else {
-            return error.NotFound;
-        };
+        var slice = self.tickets.tickets.slice();
+
+        // Find the ticket's index in the MAL.
+        const index = std.mem.indexOfScalar(Ticket.Key, slice.items(.key), key) orelse return error.NotFound;
 
         //TODO:
         //  Record the changes in some history structure.
@@ -80,8 +120,7 @@ pub const Gofast = struct {
         if (u.status) |p| slice.items(.status)[index] = p;
         if (u.parent) |p| {
             //PERF:
-            // Can optimize this slightly by reusing the index we already found
-            // int the code above.
+            // Can optimize this by reusing the index we already found in the code above.
             try self.tickets.setParent(key, p);
         }
         if (u.title) |p| {
@@ -97,7 +136,6 @@ pub const Gofast = struct {
             descriptions[index] = try SString.fromSlice(p, alloc);
         }
     }
-
     pub fn setEstimate(self: *Self, ticket: Ticket.Key, person: Ticket.Person, estimate: Ticket.TimeSpent.Seconds) !void {
         try self.tickets.setEstimate(ticket, person, estimate);
     }
@@ -132,12 +170,12 @@ test Gofast {
     const TEST = std.testing;
     const alloc = TEST.allocator;
 
-    var gf = try Gofast.init(alloc);
+    var gf = try Gofast.init(alloc, null);
     defer gf.deinit();
 
     try TEST.expect(gf.tickets.max_key == 0);
 
-    const ticket1 = try gf.createTicket("t", "d", null, 0, 0, 0);
+    const ticket1 = try gf.createTicket(.{ .title = "t", .desc = "d" });
     try TEST.expect(ticket1 == 1);
 
     try gf.deleteTicket(ticket1);
@@ -145,7 +183,46 @@ test Gofast {
 test "Gofast.gibberish" {
     const TEST = std.testing;
     const alloc = TEST.allocator;
-    var gf = try Gofast.init(alloc);
+    var gf = try Gofast.init(alloc, null);
     defer gf.deinit();
+}
+test "Gofast.persistance" {
+    const TEST = std.testing;
+    const alloc = TEST.allocator;
+    const filepath = "persist.test.gfs";
+
+    std.fs.cwd().deleteFile(filepath) catch |e| switch (e) {
+        error.FileNotFound => {},
+        else => {
+            return e;
+        },
+    };
+
+    //Create the persistance file.
+    {
+        var gofast = try Gofast.init(alloc, "persist.test.gfs");
+        defer gofast.deinit();
+        try TEST.expect(gofast.persistance != null);
+        try TEST.expectEqual(0, gofast.tickets.name_priorities.items.len);
+        try TEST.expectEqual(0, gofast.tickets.name_statuses.items.len);
+        try TEST.expectEqual(0, gofast.tickets.name_types.items.len);
+        try gofast.tickets.name_priorities.append(alloc, try SString.fromSlice("Prio0", alloc));
+
+        try TEST.expectEqual(1, gofast.tickets.name_priorities.items.len);
+        try TEST.expectEqual(0, gofast.tickets.name_statuses.items.len);
+        try TEST.expectEqual(0, gofast.tickets.name_types.items.len);
+        try TEST.expectEqualStrings("Prio0", gofast.tickets.name_priorities.items[0].s);
+        try gofast.save();
+    }
+
+    {
+        var gofast = try Gofast.init(alloc, "persist.test.gfs");
+        defer gofast.deinit();
+
+        try TEST.expectEqual(1, gofast.tickets.name_priorities.items.len);
+        try TEST.expectEqual(0, gofast.tickets.name_statuses.items.len);
+        try TEST.expectEqual(0, gofast.tickets.name_types.items.len);
+        try TEST.expectEqualStrings("Prio0", gofast.tickets.name_priorities.items[0].s);
+    }
 }
 test Replay {}

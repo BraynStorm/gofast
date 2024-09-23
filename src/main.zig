@@ -25,11 +25,9 @@ pub const std_options = .{
 var ALLOC: Allocator = undefined;
 
 fn init_gofast(gofast: *Gofast) !void {
-    const filename = "persist.gfs";
-    const cwd = std.fs.cwd();
-    const alloc = gofast.tickets.alloc;
-    const file = cwd.openFile(filename, .{ .mode = .read_only }) catch {
-        // Failed to open the file. Means it probably doesn't exist.
+    if (gofast.tickets.max_key == 0 and gofast.tickets.name_priorities.items.len == 0) {
+        std.log.info("Initializing Gofast from scratch.", .{});
+        const alloc = gofast.tickets.alloc;
         try gofast.tickets.name_priorities.appendSlice(alloc, &[_]SString{
             try SString.fromSlice("Immediate", alloc),
             try SString.fromSlice("Very High", alloc),
@@ -50,19 +48,10 @@ fn init_gofast(gofast: *Gofast) !void {
             try SString.fromSlice("In Progress", alloc),
             try SString.fromSlice("Done", alloc),
         });
+
         try Giberish.initGiberish(60, 5, gofast, alloc);
-        const file = try cwd.createFile(filename, .{
-            .exclusive = true,
-            .read = false,
-            .truncate = true,
-        });
-        defer file.close();
-        try gofast.tickets.save(file.writer());
-        return;
-    };
-    defer file.close();
-    std.log.debug("Loading", .{});
-    try gofast.tickets.loadFromFile(file.reader());
+        try gofast.save();
+    }
     // Tickets.printChildrenGraph(&gofast.tickets, alloc);
 }
 
@@ -72,7 +61,7 @@ pub fn main() !void {
     ALLOC = gpa.allocator();
 
     var gofast: Gofast = undefined;
-    gofast = try Gofast.init(ALLOC);
+    gofast = try Gofast.init(ALLOC, "persist.gfs");
     try init_gofast(&gofast);
     //TODO():
     //  Load these from a persistence file at some point.
@@ -255,7 +244,6 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
 fn simpleStaticFile(router: anytype, comptime endpoint: StrLiteral, comptime filepath: StrLiteral) void {
     router.get(endpoint, struct {
         fn handler(_: *Gofast, _: *httpz.Request, res: *httpz.Response) !void {
-            std.log.debug("GET " ++ endpoint, .{});
             try sendStaticFile(ALLOC, filepath, res.writer(), null);
             res.status = 200;
             std.log.info("GET  " ++ endpoint ++ " | " ++ filepath, .{});
@@ -421,14 +409,14 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
         const new_key = blk: {
             gofast.lock.lock();
             defer gofast.lock.unlock();
-            break :blk try gofast.createTicket(
-                title,
-                description,
-                maybe_parent,
-                @intCast(priority_i64),
-                @intCast(type_),
-                @intCast(status),
-            );
+            break :blk try gofast.createTicket(.{
+                .title = title,
+                .desc = description,
+                .parent = maybe_parent,
+                .priority = @intCast(priority_i64),
+                .type_ = @intCast(type_),
+                .status = @intCast(status),
+            });
         };
 
         try res.json(new_key, .{});
