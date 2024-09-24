@@ -68,8 +68,8 @@ pub fn main() !void {
 
     var server = try httpz.Server(*Gofast).init(ALLOC, .{
         .port = 20000,
-        .thread_pool = .{ .count = 4 },
-        .workers = .{ .count = 4 },
+        // .thread_pool = .{ .count = 4 },
+        // .workers = .{ .count = 4 },
     }, &gofast);
     defer {
         server.stop();
@@ -419,6 +419,7 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
             });
         };
 
+        res.status = 200;
         try res.json(new_key, .{});
     } else {
         res.status = 400;
@@ -430,7 +431,6 @@ fn apiDeleteTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !
     _ = .{ gofast, req, res };
     if (req.param("key")) |key_str| {
         const key = try std.fmt.parseInt(Ticket.Key, key_str, 10);
-        res.status = 200;
         {
             gofast.lock.lock();
             defer gofast.lock.unlock();
@@ -476,6 +476,8 @@ fn apiPatchTicketWork(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response
 
         try gofast.logWork(key, person, t_started, t_ended);
         res.status = 200;
+    } else {
+        res.status = 400;
     }
 }
 // =============================================================================

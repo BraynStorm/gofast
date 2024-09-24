@@ -1,0 +1,9 @@
+name: gofast
+services:
+  nginx:
+    image: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./static:/usr/share/nginx/html
+    ports:
+      - 22000:22000
