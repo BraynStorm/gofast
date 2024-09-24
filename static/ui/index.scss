@@ -250,7 +250,7 @@ div.md-editor {
 div#content {
   display: flex;
   flex-direction: row;
-  justify-content: space-evenly;
+  justify-content: stretch;
   height: 100vh;
 
   // Because :first-child was broken... had to use .fc as a class
@@ -268,38 +268,65 @@ div#content {
 /*******************************************************************************
 ****     THE TABLE     *********************************************************
 *******************************************************************************/
+
+
+// Row: Search
 div.ticket-search {
   display: flex;
   flex: 1;
+  max-height: 3em;
+  margin: 0.3em 0;
+
+  $round : 8px;
 
   &>input[type=search] {
     font-family: 'FQ';
     padding: 0.25em 0.35em;
     display: block;
-    width: auto;
     flex: 1;
+    border-radius: $round;
+    border: 1px solid #888;
   }
 
-  &>div.dropdown {
-    &>ul {
-      list-style: none;
-      margin-left: 0.1em;
+  &>div.grid {
+    * {
+      user-select: none;
+    }
 
-      &>li {
-        &>img {
-          width: 1em;
-          aspect-ratio: 1;
-        }
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin: 0 0.7em;
+
+    &>div {
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+      border-radius: $round;
+      border: 1px solid #888;
+      background-color: white;
+
+      &.selected {
+        background-color: $c2;
+      }
+
+      span {
+        padding: .5em;
+      }
+
+      &>img {
+        padding: .1em;
+        height: 32px;
+        text-align: center;
+        aspect-ratio: 1;
       }
     }
   }
 }
 
-div.bricks {
-}
-
 div.ticket-table {
   overflow: auto;
+  width: 100%;
 
   &>div {
     padding: 1em;

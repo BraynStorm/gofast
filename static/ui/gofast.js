@@ -21,6 +21,10 @@ function fmt_time(t) {
     return (dDisplay + hDisplay + mDisplay + sDisplay).trimEnd();
 }
 
+function array_remove(array, item) {
+    return array.splice(array.indexOf(item), 1);
+}
+
 document.addEventListener("alpine:init", () => {
     Alpine.data("GOFAST", () => ({
         tickets: {},
@@ -38,11 +42,13 @@ document.addEventListener("alpine:init", () => {
 
         // Model: The ticket table.
         m_table: {
+            search: {
+                string: '',
+                priority: [],
+                status: [],
+                type: [],
+            },
             highlight_key: 0,
-            // page_number: 0,
-            // page_from: 0,
-            // page_to: 0,
-            // max: 1000,
         },
         // Model: New Ticket.
         m_nt: {
@@ -177,6 +183,29 @@ document.addEventListener("alpine:init", () => {
             } else {
                 //TODO(joke): add a server-side counter 'saved-by-are-you-sure'.
             }
+        },
+        // Show only the tickets matching the search criteria.
+        ui_filter_tickets(tickets) {
+            const search = this.m_table.search;
+
+            const priorities = (search.priority);
+            const types = (search.type);
+            const statuses = (search.status);
+            const check_priority = priorities.length > 0;
+            const check_type = types.length > 0;
+            const check_status = statuses.length > 0;
+
+            const filtered = Object.entries(tickets).filter(
+                ([_, t]) => (
+                    (!check_priority || priorities.includes(t.priority)) &&
+                    (!check_status || statuses.includes(t.status)) &&
+                    (!check_type || types.includes(t.type)) &&
+                    true
+                )
+            );
+            const result = Object.fromEntries(filtered);
+            console.log(result)
+            return result;
         },
         create_ticket(title, description, maybe_parent) {
             let ticket = {
