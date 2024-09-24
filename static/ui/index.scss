@@ -257,6 +257,7 @@ div#content {
   &>div.fc {
     max-height: 100vh;
     display: flex;
+    flex: 1;
     flex-direction: column;
     justify-content: stretch;
     align-items: stretch;
@@ -277,7 +278,7 @@ div.ticket-search {
   max-height: 3em;
   margin: 0.3em 0;
 
-  $round : 8px;
+  $round: 8px;
 
   &>input[type=search] {
     font-family: 'FQ';
@@ -288,23 +289,38 @@ div.ticket-search {
     border: 1px solid #888;
   }
 
-  &>div.grid {
-    * {
-      user-select: none;
-    }
 
+  &>div.grid {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     margin: 0 0.7em;
+    border: 1px solid #888;
+    border-radius: $round;
+    overflow: hidden;
+
+    * {
+      user-select: none;
+    }
+
+    &>button {
+      border: 0;
+      padding: 0 0.1em;
+      width: 1.3em;
+      line-height: 0.9em;
+    }
 
     &>div {
-      align-items: center;
       display: flex;
       flex-direction: column;
-      border-radius: $round;
-      border: 1px solid #888;
+      align-items: center;
       background-color: white;
+      border-left: 1px solid #888;
+
+      &:nth-child(2) {
+        border: 0;
+        border-left: 0;
+      }
 
       &.selected {
         background-color: $c2;
@@ -335,6 +351,7 @@ div.ticket-table {
   &>table {
     $border: 1px solid $c5;
     margin-bottom: 4em;
+    width: 100%;
 
     // I keep forgetting this...
     border-collapse: collapse;
@@ -357,6 +374,15 @@ div.ticket-table {
         &>img {
           vertical-align: middle;
           width: 1.7em;
+          /* FIXME:
+            the flame icon (priority_-4) is a bit taller than the other priorities
+            so it pushes the row height a bit.
+
+            max-height 'fixes' it but makes the flame too small...
+
+            Think of a way to fix it.
+          */
+          // max-height: 2em;
         }
 
         &:nth-child(1) {

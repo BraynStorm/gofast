@@ -48,6 +48,11 @@ document.addEventListener("alpine:init", () => {
                 status: [],
                 type: [],
             },
+            order: [
+                ['priority', 1],
+                ['status', 1],
+                ['type', 1],
+            ],
             highlight_key: 0,
         },
         // Model: New Ticket.
@@ -118,7 +123,6 @@ document.addEventListener("alpine:init", () => {
                 // Load the ticket_time table.
                 {
                     const ticket_time = r.ticket_time;
-                    console.log(ticket_time);
                     const tickets = ticket_time.tickets;
                     const people = ticket_time.people;
                     const estimates = ticket_time.estimates;
@@ -187,15 +191,18 @@ document.addEventListener("alpine:init", () => {
         // Show only the tickets matching the search criteria.
         ui_filter_tickets(tickets) {
             const search = this.m_table.search;
+            const order = this.m_table.order;
 
             const priorities = (search.priority);
             const types = (search.type);
             const statuses = (search.status);
-            const check_priority = priorities.length > 0;
-            const check_type = types.length > 0;
-            const check_status = statuses.length > 0;
+            const check_priority = priorities.length > 0 && priorities.length < this.names.priority.length;
+            const check_type = types.length > 0 && types.length < this.names.type.length;
+            const check_status = statuses.length > 0 && statuses.length < this.names.status.length;
 
-            const filtered = Object.entries(tickets).filter(
+
+            let entries = Object.entries(tickets);
+            entries = entries.filter(
                 ([_, t]) => (
                     (!check_priority || priorities.includes(t.priority)) &&
                     (!check_status || statuses.includes(t.status)) &&
@@ -203,9 +210,22 @@ document.addEventListener("alpine:init", () => {
                     true
                 )
             );
-            const result = Object.fromEntries(filtered);
-            console.log(result)
-            return result;
+            entries = entries.sort(
+                ([ak, a], [bk, b]) => {
+                    let r = 0;
+                    for (const [s, o] of order) {
+                        const v = a[s] * o - b[s] * o;
+                        r += v;
+                        if (v != 0) {
+                            break;
+                        }
+                    }
+                    return r;
+                }
+            );
+
+            // const result = Object.fromEntries(entries);
+            return entries.map(([k, t]) => [parseInt(k), t]);
         },
         create_ticket(title, description, maybe_parent) {
             let ticket = {
