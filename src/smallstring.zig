@@ -8,7 +8,7 @@ pub const ShortString = struct {
 
     const Self = @This();
 
-    pub inline fn fromSlice(sl: []const u8, alloc: Allocator) !ShortString {
+    pub inline fn fromSlice(alloc: Allocator, sl: []const u8) !ShortString {
         const ss = ShortString{ .s = try alloc.alloc(u8, sl.len) };
         @memcpy(ss.s, sl);
         return ss;

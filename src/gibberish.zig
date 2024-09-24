@@ -230,7 +230,7 @@ pub fn initGiberish(
             const worktime = std.rand.intRangeAtMost(random, Ticket.TimeSpent.Seconds, 1, 60 * 60) * 60;
             const time_started = std.rand.intRangeAtMost(random, i64, 1727000000, std.time.timestamp());
 
-            try gofast.setEstimate(key, person, estimated);
+            try gofast.giveEstimate(key, person, estimated);
             try gofast.logWork(key, person, time_started, time_started + worktime);
         }
     }

@@ -280,7 +280,7 @@ document.addEventListener("alpine:init", () => {
             /*TODO:
                 Map priority->image on the server.
             */
-            return `/static/ui/icons/priority_${priority_id - 3}.svg`;
+            return `/static/ui/icons/priority_${priority_id - 4}.svg`;
         },
         type_icon(type_id) {
             return `/static/ui/icons/type_${type_id}.svg`;

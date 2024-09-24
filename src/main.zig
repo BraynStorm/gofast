@@ -29,24 +29,25 @@ fn init_gofast(gofast: *Gofast) !void {
         std.log.info("Initializing Gofast from scratch.", .{});
         const alloc = gofast.tickets.alloc;
         try gofast.tickets.name_priorities.appendSlice(alloc, &[_]SString{
-            try SString.fromSlice("Immediate", alloc),
-            try SString.fromSlice("Very High", alloc),
-            try SString.fromSlice("High", alloc),
-            try SString.fromSlice("Normal", alloc),
-            try SString.fromSlice("Low", alloc),
-            try SString.fromSlice("Tweak", alloc),
-            try SString.fromSlice("Negligable", alloc),
+            try SString.fromSlice(alloc, "Immediate"),
+            try SString.fromSlice(alloc, "Very Very High"),
+            try SString.fromSlice(alloc, "Very High"),
+            try SString.fromSlice(alloc, "High"),
+            try SString.fromSlice(alloc, "Normal"),
+            try SString.fromSlice(alloc, "Low"),
+            try SString.fromSlice(alloc, "Tweak"),
+            try SString.fromSlice(alloc, "Negligable"),
         });
         try gofast.tickets.name_types.appendSlice(alloc, &[_]SString{
-            try SString.fromSlice("Task", alloc),
-            try SString.fromSlice("Bug", alloc),
-            try SString.fromSlice("Feature", alloc),
-            try SString.fromSlice("Milestone", alloc),
+            try SString.fromSlice(alloc, "Task"),
+            try SString.fromSlice(alloc, "Bug"),
+            try SString.fromSlice(alloc, "Feature"),
+            try SString.fromSlice(alloc, "Milestone"),
         });
         try gofast.tickets.name_statuses.appendSlice(alloc, &[_]SString{
-            try SString.fromSlice("To Do", alloc),
-            try SString.fromSlice("In Progress", alloc),
-            try SString.fromSlice("Done", alloc),
+            try SString.fromSlice(alloc, "To Do"),
+            try SString.fromSlice(alloc, "In Progress"),
+            try SString.fromSlice(alloc, "Done"),
         });
 
         try Giberish.initGiberish(100, 5, gofast, alloc);
@@ -207,6 +208,9 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
             //    Use a hashmap or something similar here.
             if (std.mem.eql(u8, "png", path_extension)) {
                 res.header("Content-Type", "image/png");
+            }
+            if (std.mem.eql(u8, "apng", path_extension)) {
+                res.header("Content-Type", "image/apng");
             }
             if (std.mem.eql(u8, "svg", path_extension)) {
                 res.header("Content-Type", "image/svg+xml");
@@ -411,7 +415,7 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
             defer gofast.lock.unlock();
             break :blk try gofast.createTicket(.{
                 .title = title,
-                .desc = description,
+                .description = description,
                 .parent = maybe_parent,
                 .priority = @intCast(priority_i64),
                 .type_ = @intCast(type_),

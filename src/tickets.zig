@@ -100,9 +100,12 @@ pub const TicketStore = struct {
     // PERF: Convert to a hashmap with a linked list.
     graph_children: std.MultiArrayList(Ticket.FatLink) = .{},
 
+    // STYLE:
+    //  Make these a separate struct.
     name_types: StringMap = .{},
     name_priorities: StringMap = .{},
     name_statuses: StringMap = .{},
+    name_people: StringMap = .{},
 
     /// Allocator stored for convenience.
     alloc: Allocator = undefined,
@@ -186,6 +189,8 @@ pub const TicketStore = struct {
         try Self.loadStringMapV0(self.alloc, reader, &self.name_statuses);
         // log.debug("loadFromV0: Loaded {} name_statuses", .{self.name_statuses.items.len});
 
+        try Self.loadStringMapV0(self.alloc, reader, &self.name_people);
+
         const max_key = try reader.readInt(u32, .little);
         // log.debug("loadFromV0: max_key={}", .{max_key});
         const n_tickets = try reader.readInt(u32, .little);
@@ -262,9 +267,11 @@ pub const TicketStore = struct {
             descriptions[i].deinit(alloc);
         }
         self.tickets.deinit(alloc);
+        self.ticket_time_spent.deinit(alloc);
         TicketStore.deinit_stringmap(alloc, &self.name_statuses);
         TicketStore.deinit_stringmap(alloc, &self.name_types);
         TicketStore.deinit_stringmap(alloc, &self.name_priorities);
+        TicketStore.deinit_stringmap(alloc, &self.name_people);
     }
     fn deinit_stringmap(alloc: Allocator, stringmap: *StringMap) void {
         var i = stringmap.items.len;
@@ -298,6 +305,8 @@ pub const TicketStore = struct {
         try saveV0StringMap(writer, &self.name_priorities);
         //name_statuses
         try saveV0StringMap(writer, &self.name_statuses);
+        //name_people
+        try saveV0StringMap(writer, &self.name_people);
 
         //max_key
         try writer.writeInt(u32, self.max_key, .little);
@@ -705,19 +714,19 @@ test TicketStore {
     var store = try TicketStore.init(alloc);
     defer store.deinit();
 
-    const k1 = try store.addOne(try SString.fromSlice("T1", alloc), try SString.fromSlice("D1", alloc), null, 0, 0, 0);
-    try TEST.expect(k1 != 0);
-    const k2 = try store.addOne(try SString.fromSlice("T2", alloc), try SString.fromSlice("D2", alloc), null, 0, 0, 0);
-    try TEST.expect(k2 != 0);
-    const k3 = try store.addOne(try SString.fromSlice("T3", alloc), try SString.fromSlice("D3", alloc), null, 0, 0, 0);
-    try TEST.expect(k3 != 0);
-    const k4 = try store.addOne(try SString.fromSlice("T4", alloc), try SString.fromSlice("D4", alloc), null, 0, 0, 0);
-    try TEST.expect(k4 != 0);
-    const k5 = try store.addOne(try SString.fromSlice("T5", alloc), try SString.fromSlice("D5", alloc), null, 0, 0, 0);
-    try TEST.expect(k5 != 0);
+    const k1 = try store.addOne(try SString.fromSlice(alloc, "T1"), try SString.fromSlice(alloc, "D1"), null, 0, 0, 0);
+    const k2 = try store.addOne(try SString.fromSlice(alloc, "T2"), try SString.fromSlice(alloc, "D2"), null, 0, 0, 0);
+    const k3 = try store.addOne(try SString.fromSlice(alloc, "T3"), try SString.fromSlice(alloc, "D3"), null, 0, 0, 0);
+    const k4 = try store.addOne(try SString.fromSlice(alloc, "T4"), try SString.fromSlice(alloc, "D4"), null, 0, 0, 0);
+    const k5 = try store.addOne(try SString.fromSlice(alloc, "T5"), try SString.fromSlice(alloc, "D5"), null, 0, 0, 0);
+    try TEST.expect(k1 == 1);
+    try TEST.expect(k2 == 2);
+    try TEST.expect(k3 == 3);
+    try TEST.expect(k4 == 4);
+    try TEST.expect(k5 == 5);
 
     // Setting a parent directly.
-    const k6 = try store.addOne(try SString.fromSlice("T6", alloc), try SString.fromSlice("D6", alloc), k1, 0, 0, 0);
+    const k6 = try store.addOne(try SString.fromSlice(alloc, "T6"), try SString.fromSlice(alloc, "D6"), k1, 0, 0, 0);
     try TEST.expect(k6 != 0);
     {
         const k1children = try store.childrenAlloc(k1, alloc, 1);
@@ -739,7 +748,7 @@ test TicketStore {
     try store.connectFromTo(k1, k2);
 
     // Add another child and remove the parent
-    const k7 = try store.addOne(try SString.fromSlice("T7", alloc), try SString.fromSlice("D7", alloc), k1, 0, 0, 0);
+    const k7 = try store.addOne(try SString.fromSlice(alloc, "T7"), try SString.fromSlice(alloc, "D7"), k1, 0, 0, 0);
     try TEST.expect(k7 != 0);
     {
         const k1children = try store.childrenAlloc(k1, alloc, 1);
