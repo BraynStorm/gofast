@@ -6,7 +6,8 @@
     <input type="search" placeholder="Priority" @focus="o=true" :value="pr">
     <ul x-show="o">
       <template x-for="(name, id) in names.priority" :key="id">
-        <li @click="o=false; pr=$el.innerText.trim()" :style="`list-style-image: ${priority_icon(id)}`" >
+        <li @click="o=false; pr=$el.innerText.trim()"
+          :style="`list-style-image: ${priority_icon(id)}`">
           <input type="checkbox">
           <img :src="priority_icon(id)">
           <span x-text="name"></span>

@@ -6,7 +6,7 @@
   x-transition:leave-end="leaveend"
   x-transition:leave-start="leavestart"
   x-data="{ e_desc: false }">
-  <div class="controls">
+  <div class="controls up">
     <button @click="stop_edit_ticket" class="btn-cross text">Cancel</button>
     <button @click="stop_edit_ticket" class="btn-checkmark text">Save</button>
   </div>
@@ -43,7 +43,7 @@
   <div x-show="e_desc" class="description md-editor">
     <textarea placeholder="Description..."
       x-model="m_et.description"></textarea>
-    <div class="controls">
+    <div class="controls down">
       <button @click="e_desc = false" class="btn-cross text">Cancel</button>
       <button @click="e_desc = false" class="btn-checkmark text">Save</button>
     </div>

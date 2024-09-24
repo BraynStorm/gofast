@@ -36,7 +36,6 @@ $scrollPastEnd : 5em;
   src: local('Friz Quadrata Std Bold'), url('/static/ui/friz-quadrata-std-bold-587034a220f9f.woff') format('woff');
 }
 
-
 @font-face {
   font-family: 'FQ Bold Italic';
   font-style: normal;
@@ -130,7 +129,7 @@ aside {
   display: flex;
   flex-direction: column;
 
-  padding: 1em;
+  padding: 0.2em;
   margin-top: 1em;
   margin-bottom: 1em;
   box-sizing: border-box;
@@ -139,6 +138,7 @@ aside {
   box-shadow: 0 0 4px 1px $c3;
   border-top: $border;
   border-bottom: $border;
+
 
   &.enter {
     transition: transform 500ms;
@@ -174,19 +174,27 @@ aside {
     border-top-right-radius: $rounding;
     border-bottom-right-radius: $rounding;
     border-right: $border;
-    padding: 0;
 
-    &.edit>.controls {
-      margin-bottom: 0.5em;
+    &.edit div.controls {
       justify-content: stretch;
 
+      // Whole-issue controls
       &>button {
-        margin: 0.2em;
+        margin: 0 0 0 0.2em;
         flex: 1;
 
-        &:last-child {
-          border-top-right-radius: $rounding;
+        &:first-child {
+          margin: 0;
         }
+      }
+
+      &.up>button:last-child {
+        border-top-right-radius: $rounding;
+        margin-bottom: 0.5em;
+      }
+
+      &.down>button:last-child {
+        border-bottom-right-radius: $rounding;
       }
     }
   }
@@ -276,6 +284,7 @@ div.ticket-search {
     &>ul {
       list-style: none;
       margin-left: 0.1em;
+
       &>li {
         &>img {
           width: 1em;
@@ -286,13 +295,66 @@ div.ticket-search {
   }
 }
 
+div.bricks {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  max-width: 100px;
+  max-height: 100px;
+  padding: 0;
+
+  &>img {
+    $delay: 0.2s;
+    opacity: 0;
+    position: absolute;
+    width: 100%;
+    animation: change-bricks $delay*5 infinite alternate;
+    animation-timing-function: ease-in-out;
+    &:nth-child(1) {
+      animation-delay: $delay*0;
+    }
+
+    &:nth-child(2) {
+      animation-delay: $delay*1;
+    }
+
+    &:nth-child(3) {
+      animation-delay: $delay*2;
+    }
+
+    &:nth-child(4) {
+      animation-delay: $delay*3;
+    }
+
+    &:nth-child(5) {
+      animation-delay: $delay*4;
+    }
+  }
+}
+
+@keyframes change-bricks {
+  0% {
+    opacity: 1;
+  }
+
+  28% {
+    opacity: 1;
+  }
+  35% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
 div.ticket-table {
   overflow: auto;
 
-  &> {
+  &>div {
     padding: 1em;
   }
-
 
   &>table {
     $border: 1px solid $c5;
