@@ -5,7 +5,7 @@ $c3: #DC6504; //Cocoa Brown
 $c4: #9D4B43; //Chestnut       
 $c5: #14110F; //Smoky Black   
 
-$c6: #888; // [FAKE] Grayish 
+$c6: #A8A8A8; // [FAKE] Grayish 
 $cLink: rgb(0, 102, 204); // [FAKE]
 $cDarken: rgba(0, 0, 0, 0.1); // [FAKE]
 
@@ -349,9 +349,11 @@ div.ticket-table {
   }
 
   &>table {
-    $border: 1px solid $c5;
+    $border: 1px solid $c6;
     margin-bottom: 4em;
     width: 100%;
+    border: $border;
+    padding-right: 2em;
 
     // I keep forgetting this...
     border-collapse: collapse;
@@ -368,26 +370,27 @@ div.ticket-table {
       &>td {
         border-bottom: $border;
 
+        &:first-child {
+          padding-left: 0.3em;
+        }
+
+        &:last-child {
+          padding-right: 0.3em;
+        }
+
         box-sizing: border-box;
-        padding: 2px 5px;
+        // padding: 2px 5px;
+
+        &.icon {
+          text-align: center;
+        }
 
         &>img {
           vertical-align: middle;
-          width: 1.7em;
-          /* FIXME:
-            the flame icon (priority_-4) is a bit taller than the other priorities
-            so it pushes the row height a bit.
-
-            max-height 'fixes' it but makes the flame too small...
-
-            Think of a way to fix it.
-          */
-          // max-height: 2em;
+          height: 2em;
+          max-width: 1.7em;
         }
 
-        &:nth-child(1) {
-          line-height: 1.5em;
-        }
 
         &:nth-child(1),
         &:nth-child(3),

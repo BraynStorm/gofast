@@ -103,12 +103,12 @@ document.addEventListener("alpine:init", () => {
 
                 console.log(`-> /api/tickets -> ${keys.length}/${count} ticket(s), max_key=${max_key}`);
 
-                // const tickets = {};
+                const tickets = {};
 
                 this.max_key = max_key;
                 for (let i = 0; i < keys.length; ++i) {
                     const key = keys[i];
-                    this.tickets[key] = {
+                    tickets[key] = {
                         key: key,
                         title: titles[i],
                         description: descriptions[i],
@@ -118,19 +118,19 @@ document.addEventListener("alpine:init", () => {
                         status: statuses[i],
                     }
                 }
-                // this.tickets = tickets;
+                this.tickets = tickets;
 
                 // Load the ticket_time table.
-                {
-                    const ticket_time = r.ticket_time;
-                    const tickets = ticket_time.tickets;
-                    const people = ticket_time.people;
-                    const estimates = ticket_time.estimates;
-                    const spent_ = ticket_time.spent;
+                const ticket_time = r.ticket_time;
+                const ticket_keys = ticket_time.tickets;
+                const people = ticket_time.people;
+                const estimates = ticket_time.estimates;
+                const spent_ = ticket_time.spent;
 
-                    const result = { estimate: {}, spent: {} };
-                    for (let i = 0; i < tickets.length; ++i) {
-                        const key = tickets[i];
+                const result = { estimate: {}, spent: {} };
+                if (0) {
+                    for (let i = 0; i < ticket_keys.length; ++i) {
+                        const key = ticket_keys[i];
                         const person = people[i];
                         const estimate = estimates[i];
                         const spent = spent_[i];
@@ -152,9 +152,8 @@ document.addEventListener("alpine:init", () => {
                         sp += spent;
                         result.spent[key][person] = sp;
                     }
-
-                    this.ticket_time = result;
                 }
+                this.ticket_time = result;
 
                 /*TODO:
                     Implement a graph visualization of ticket relationships.
@@ -189,7 +188,7 @@ document.addEventListener("alpine:init", () => {
             }
         },
         // Show only the tickets matching the search criteria.
-        ui_filter_tickets(tickets) {
+        ui_filter_tickets() {
             const search = this.m_table.search;
             const order = this.m_table.order;
 
@@ -201,7 +200,10 @@ document.addEventListener("alpine:init", () => {
             const check_status = statuses.length > 0 && statuses.length < this.names.status.length;
 
 
-            let entries = Object.entries(tickets);
+            let entries = Object.entries(this.tickets);
+            // First 100
+            // entries = entries.slice(0, 5000);
+            // PERF: Okay, so my loading code is slow, not the AlpineJS DOM generation.
             entries = entries.filter(
                 ([_, t]) => (
                     (!check_priority || priorities.includes(t.priority)) &&
@@ -344,6 +346,8 @@ document.addEventListener("alpine:init", () => {
             return this.names.type[type_id];
         },
         progress(key) {
+            return { spent: 0, estimate: 0 };
+
             const estimate = this.ticket_time.estimate[key];
             const spent = this.ticket_time.spent[key];
 

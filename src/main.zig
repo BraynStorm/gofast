@@ -50,7 +50,7 @@ fn init_gofast(gofast: *Gofast) !void {
             try SString.fromSlice(alloc, "Done"),
         });
 
-        try Giberish.initGiberish(100, 5, gofast, alloc);
+        try Giberish.initGiberish(1000, 5, gofast, alloc);
         try gofast.save();
     }
     // Tickets.printChildrenGraph(&gofast.tickets, alloc);

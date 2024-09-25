@@ -8,17 +8,17 @@
       if (index === -1) { 
         return '--';
       } else {
-       console.log(typeof(index))
         let direction = m_table.order[index][1];
          
         return `${parseInt(index)+1} ${direction == 0 ? '' : direction > 0 ? '↑' : '↓'}`;
       }
     " @click="
-        /* TODO - Right-click => 0 */
-        /* TODO - Remove from list on 0? There's gotta be a way for the user to move the list's order. Drag? */
-        let v = m_table.order.find(x => x[0] === prop);
-        v[1] += 1; if (v[1] >= 2) v[1] -= 3;
+    let v = m_table.order.find(x => x[0] === prop);
+    v[1] += 1; if (v[1] >= 2) v[1] -= 3;
     "></button>
+    <!--
+    TODO - Right-click => 0
+    TODO - Remove from list on 0? There's gotta be a way for the user to move the list's order. Drag? -->
     <!-- <div x-text="m_table.search[prop].map(x=>priority_name(x)).join(', ')"></div> -->
     <template x-for="_, id in names[prop]" :key="id">
       <div :class="m_table.search[prop].includes(id) ? 'selected' : ''"
@@ -77,11 +77,10 @@
 <div class="ticket-table">
   <table>
     <template
-      x-for="([key, t]) of ui_filter_tickets(tickets)"
+      x-for="[key, t] of ui_filter_tickets()"
       :key="key">
       <tr :id="display_key(t.key)"
         @click="edit_ticket(t.key)"
-        @mouseover="ui_hover_ticket($event, t.key)"
         @mousemove="ui_hover_ticket($event, t.key)"
         @mouseleave="ui_hover_ticket($event, 0)"
         class="ticket"
@@ -91,12 +90,12 @@
           <a class="ticket" :href="display_key(t.key)"
             x-text="display_key(t.key)"></a>
         </td>
-        <td>
+        <td class="icon">
           <img :src="priority_icon(t.priority)"
             :title="priority_name(t.priority)" />
         </td>
+        <!-- Progress bar -->
         <td x-data="progress(t.key)">
-          <!-- Progress bar -->
           <div class="progress-bar"
             x-data="{ p: (estimate > 0 ? spent/estimate : 0), left: estimate - spent}"
             x-text="`${fmt_time(left)} (${parseInt(Math.min(p, 1)*100)}%)`">
@@ -104,11 +103,6 @@
         </td>
         <td x-text="status_name(t.status)"></td>
         <td class="title" x-text="t.title"></td>
-        <!-- <td class="desciption" x-text="t.description"></td> -->
-        <!-- <td>
-          <button class="btn-cross"
-            @click="ui_delete_ticket(t.key)"></button>
-        </td> -->
       </tr>
     </template>
   </table>

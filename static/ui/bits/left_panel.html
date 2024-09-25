@@ -23,20 +23,24 @@
     <select class="et_type" x-model="m_et.type">
       <template x-for="(type, id) in names.type" :key="id">
         <option :value="id" x-text="type"></option>
-      </template>
+      </template>5t66666
     </select>
     <select class="et_status" x-model="m_et.status">
       <template x-for="(status, id) in names.status" :key="id">
         <option :value="id" x-text="status"></option>
       </template>
     </select>
-    <select class="et_parent" x-model="m_et.parent">
-      <option value>No Parent</option>
-      <template x-for="(t, key) in tickets" :key="key">
-        <option :value="key"
-          x-text="display_key(key) + ': ' + t.title.substring(0, 14) + '...'"></option>
-      </template>
-    </select>
+    <!-- IF-guard this, so that it doesn't take forever to load the main table. -->
+    <template x-if="left_panel.mode === 'edit'">
+      <select class="et_parent" x-model="m_et.parent">
+        <option value>No Parent</option>
+        <template x-for="(t, key) in tickets"
+          :key="key">
+          <option :value="key"
+            x-text="display_key(key) + ': ' + t.title.substring(0, 14) + '...'"></option>
+        </template>
+      </select>
+    </template>
   </div>
 
   <!-- Editing the description -->
