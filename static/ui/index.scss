@@ -391,6 +391,64 @@ div.icon-grid {
   }
 }
 
+/* These are a bit special... */
+div.icon-selectors>div.sorting {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  flex-direction: row;
+  background-color: #888;
+  overflow: hidden;
+  margin: 0 0.7em;
+  gap: 1px;
+
+  &>div.sorting {
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    flex-direction: column;
+    gap: 1px;
+
+    &>button {
+      border: 0;
+      padding: 0 0.1em;
+      width: 1.3em;
+      flex: 1;
+    }
+  }
+
+  /*TODO:
+    These border aligning things
+    are making it difficult to which lane
+    each icon belongs to.
+
+    border-left: 1px solid #888;
+    border-right: 1px solid #888;
+    border-bottom: 1px solid #888;
+
+    &:nth-child(2) {
+      border-top: 1px solid #888;
+      border-top-left-radius: $round;
+      border-top-right-radius: $round;
+    }
+
+    &:nth-last-child(1) {
+      border-bottom-left-radius: $round;
+      border-bottom-right-radius: $round;
+    }
+  */
+  border: 1px solid #888;
+  border-radius: $round;
+
+
+  &>div.icon-grid {
+    flex: 1;
+    border: 0;
+    border-radius: 0;
+    margin: 0;
+  }
+}
+
 // Row: Search
 div.ticket-search {
   display: flex;
