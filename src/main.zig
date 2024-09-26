@@ -89,6 +89,7 @@ pub fn main() !void {
 
     //TODO: Use @embedFile to have them as "DEFAULTS" but still allow HDD edits, fswatch and reload.
     simpleStaticFile(router, "/", "static/ui/index.html");
+    simpleStaticFile(router, "/wasi", "zig-out/bin/gofast.wasm");
 
     simpleStaticFiles(router, "/static/*", "static");
 
@@ -198,29 +199,8 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
 
             // == "./static/x/y/./z.ext"
             path_buf.appendSliceAssumeCapacity(relative);
-            const last_dot_index = std.mem.lastIndexOfScalar(u8, path_buf.items, '.') orelse 0;
-            const path_extension = path_buf.items[last_dot_index + 1 ..];
+            setContentType(path_buf.items, res);
 
-            //TODO:
-            //  Support more mime-types.
-            //
-            //  PERF:
-            //    Use a hashmap or something similar here.
-            if (std.mem.eql(u8, "png", path_extension)) {
-                res.header("Content-Type", "image/png");
-            }
-            if (std.mem.eql(u8, "apng", path_extension)) {
-                res.header("Content-Type", "image/apng");
-            }
-            if (std.mem.eql(u8, "svg", path_extension)) {
-                res.header("Content-Type", "image/svg+xml");
-            }
-            if (std.mem.eql(u8, "css", path_extension)) {
-                res.header("Content-Type", "text/css");
-            }
-            if (std.mem.eql(u8, "js", path_extension) or std.mem.eql(u8, "mjs", path_extension)) {
-                res.header("Content-Type", "application/javascript");
-            }
             std.log.info("GET {s}", .{url_path});
             sendStaticFile(
                 small_alloc,
@@ -248,6 +228,7 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
 fn simpleStaticFile(router: anytype, comptime endpoint: StrLiteral, comptime filepath: StrLiteral) void {
     router.get(endpoint, struct {
         fn handler(_: *Gofast, _: *httpz.Request, res: *httpz.Response) !void {
+            setContentType(filepath, res);
             try sendStaticFile(ALLOC, filepath, res.writer(), null);
             res.status = 200;
             std.log.info("GET  " ++ endpoint ++ " | " ++ filepath, .{});
@@ -497,6 +478,31 @@ fn apiPatchTicketWork(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response
 // =============================================================================
 // Helpers
 // =============================================================================
+
+/// Set the response "Content-Type" based on the filepath's extension.
+fn setContentType(path: []const u8, res: *httpz.Response) void {
+    const last_dot_index = std.mem.lastIndexOfScalar(u8, path, '.') orelse 0;
+    const path_extension = path[last_dot_index + 1 ..];
+
+    //TODO:
+    //  Support more mime-types.
+    //
+    //  PERF:
+    //    Use a hashmap or something similar here.
+    if (std.mem.eql(u8, "wasm", path_extension)) {
+        res.header("Content-Type", "application/wasm");
+    } else if (std.mem.eql(u8, "png", path_extension)) {
+        res.header("Content-Type", "image/png");
+    } else if (std.mem.eql(u8, "apng", path_extension)) {
+        res.header("Content-Type", "image/apng");
+    } else if (std.mem.eql(u8, "svg", path_extension)) {
+        res.header("Content-Type", "image/svg+xml");
+    } else if (std.mem.eql(u8, "css", path_extension)) {
+        res.header("Content-Type", "text/css");
+    } else if (std.mem.eql(u8, "js", path_extension) or std.mem.eql(u8, "mjs", path_extension)) {
+        res.header("Content-Type", "application/javascript");
+    }
+}
 
 /// Batch read-and-send a file from a relative path.
 fn sendStaticFile(

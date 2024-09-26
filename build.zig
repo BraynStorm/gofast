@@ -2,6 +2,12 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
+    const targetWasm = b.resolveTargetQuery(
+        .{
+            .cpu_arch = .wasm32,
+            .os_tag = .freestanding,
+        },
+    );
     const optimize = b.standardOptimizeOption(.{});
 
     const exe = b.addExecutable(.{
@@ -15,6 +21,15 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
+    const wasm = b.addExecutable(.{
+        .name = "gofast",
+        .root_source_file = b.path("src/wasi.zig"),
+        .target = targetWasm,
+        .optimize = optimize,
+    });
+    wasm.rdynamic = true;
+    wasm.entry = .disabled;
 
     // const tracy = b.dependency("tracy", .{
     //     .target = target,
@@ -41,6 +56,7 @@ pub fn build(b: *std.Build) void {
     // exe.linkLibC(); // sqlite needs it.
 
     b.installArtifact(exe);
+    b.installArtifact(wasm);
 
     const run_cmd = b.addRunArtifact(exe);
     const run_tests = b.addRunArtifact(exe_tests);
