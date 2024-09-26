@@ -7,9 +7,9 @@ const sqlite3 = @import("sqlite3.zig").lib;
 
 pub const Ticket = struct {
     key: Key,
+    parent: ?Key = null,
     title: SString,
     description: SString,
-    parent: ?Key = null,
 
     /// Bug, Task, etc.
     type: Type = 0,
@@ -17,6 +17,11 @@ pub const Ticket = struct {
     priority: Priority = 0,
     /// ToDo, InProgress, Done, etc.
     status: Status = 0,
+
+    creator: Person,
+    created_on: i64,
+    last_updated_by: Person,
+    last_updated_on: i64,
 
     pub const Key = u32;
     pub const Type = i8;
@@ -370,30 +375,40 @@ pub const TicketStore = struct {
     /// TODO:
     ///     Just take a Ticket-like struct instead of this parameter mess,
     ///     It's not even type-safe!
-    pub fn addOne(
+    pub fn addTicket(
         self: *Self,
-        title: SString,
-        description: SString,
-        parent: ?Ticket.Key,
-        type_: Ticket.Type,
-        priority: Ticket.Priority,
-        status: Ticket.Status,
+        c: struct {
+            title: SString,
+            description: SString,
+            parent: ?Ticket.Key,
+            type_: Ticket.Type,
+            priority: Ticket.Priority,
+            status: Ticket.Status,
+            creator: Ticket.Person,
+            created_on: i64,
+            last_updated_by: Ticket.Person,
+            last_updated_on: i64,
+        },
     ) !Ticket.Key {
         self.max_key += 1;
         const key = self.max_key;
         try self.tickets.append(self.alloc, .{
             .key = key,
-            .title = title,
-            .description = description,
-            .parent = parent,
-            .type = type_,
-            .priority = priority,
-            .status = status,
+            .title = c.title,
+            .description = c.description,
+            .parent = null,
+            .type = c.type_,
+            .priority = c.priority,
+            .status = c.status,
+            .creator = c.creator,
+            .created_on = c.created_on,
+            .last_updated_by = c.last_updated_by,
+            .last_updated_on = c.last_updated_on,
         });
 
-        if (parent != null) {
+        if (c.parent != null) {
             // We need to connect the child as well.
-            try self.setParent(key, parent);
+            try self.setParent(key, c.parent);
         }
 
         return key;
@@ -714,11 +729,66 @@ test TicketStore {
     var store = try TicketStore.init(alloc);
     defer store.deinit();
 
-    const k1 = try store.addOne(try SString.fromSlice(alloc, "T1"), try SString.fromSlice(alloc, "D1"), null, 0, 0, 0);
-    const k2 = try store.addOne(try SString.fromSlice(alloc, "T2"), try SString.fromSlice(alloc, "D2"), null, 0, 0, 0);
-    const k3 = try store.addOne(try SString.fromSlice(alloc, "T3"), try SString.fromSlice(alloc, "D3"), null, 0, 0, 0);
-    const k4 = try store.addOne(try SString.fromSlice(alloc, "T4"), try SString.fromSlice(alloc, "D4"), null, 0, 0, 0);
-    const k5 = try store.addOne(try SString.fromSlice(alloc, "T5"), try SString.fromSlice(alloc, "D5"), null, 0, 0, 0);
+    const k1 = try store.addTicket(.{
+        .title = try SString.fromSlice(alloc, "T1"),
+        .description = try SString.fromSlice(alloc, "D1"),
+        .parent = null,
+        .status = 0,
+        .type_ = 0,
+        .priority = 0,
+        .creator = 0,
+        .created_on = 0,
+        .last_updated_on = 0,
+        .last_updated_by = 0,
+    });
+    const k2 = try store.addTicket(.{
+        .title = try SString.fromSlice(alloc, "T2"),
+        .description = try SString.fromSlice(alloc, "D2"),
+        .parent = null,
+        .status = 0,
+        .type_ = 0,
+        .priority = 0,
+        .creator = 0,
+        .created_on = 0,
+        .last_updated_on = 0,
+        .last_updated_by = 0,
+    });
+    const k3 = try store.addTicket(.{
+        .title = try SString.fromSlice(alloc, "T3"),
+        .description = try SString.fromSlice(alloc, "D3"),
+        .parent = null,
+        .status = 0,
+        .type_ = 0,
+        .priority = 0,
+        .creator = 0,
+        .created_on = 0,
+        .last_updated_on = 0,
+        .last_updated_by = 0,
+    });
+    const k4 = try store.addTicket(.{
+        .title = try SString.fromSlice(alloc, "T4"),
+        .description = try SString.fromSlice(alloc, "D4"),
+        .parent = null,
+        .status = 0,
+        .type_ = 0,
+        .priority = 0,
+        .creator = 0,
+        .created_on = 0,
+        .last_updated_on = 0,
+        .last_updated_by = 0,
+    });
+    const k5 = try store.addTicket(.{
+        .title = try SString.fromSlice(alloc, "T5"),
+        .description = try SString.fromSlice(alloc, "D5"),
+        .parent = null,
+        .status = 0,
+        .type_ = 0,
+        .priority = 0,
+        .creator = 0,
+        .created_on = 0,
+        .last_updated_on = 0,
+        .last_updated_by = 0,
+    });
     try TEST.expect(k1 == 1);
     try TEST.expect(k2 == 2);
     try TEST.expect(k3 == 3);
@@ -726,7 +796,18 @@ test TicketStore {
     try TEST.expect(k5 == 5);
 
     // Setting a parent directly.
-    const k6 = try store.addOne(try SString.fromSlice(alloc, "T6"), try SString.fromSlice(alloc, "D6"), k1, 0, 0, 0);
+    const k6 = try store.addTicket(.{
+        .title = try SString.fromSlice(alloc, "T6"),
+        .description = try SString.fromSlice(alloc, "D6"),
+        .parent = k1,
+        .status = 0,
+        .type_ = 0,
+        .priority = 0,
+        .creator = 0,
+        .created_on = 0,
+        .last_updated_on = 0,
+        .last_updated_by = 0,
+    });
     try TEST.expect(k6 != 0);
     {
         const k1children = try store.childrenAlloc(k1, alloc, 1);
@@ -748,7 +829,18 @@ test TicketStore {
     try store.connectFromTo(k1, k2);
 
     // Add another child and remove the parent
-    const k7 = try store.addOne(try SString.fromSlice(alloc, "T7"), try SString.fromSlice(alloc, "D7"), k1, 0, 0, 0);
+    const k7 = try store.addTicket(.{
+        .title = try SString.fromSlice(alloc, "T7"),
+        .description = try SString.fromSlice(alloc, "D7"),
+        .parent = k1,
+        .status = 0,
+        .type_ = 0,
+        .priority = 0,
+        .creator = 0,
+        .created_on = 0,
+        .last_updated_on = 0,
+        .last_updated_by = 0,
+    });
     try TEST.expect(k7 != 0);
     {
         const k1children = try store.childrenAlloc(k1, alloc, 1);

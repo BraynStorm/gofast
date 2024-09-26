@@ -167,12 +167,21 @@ pub fn initGiberish(
     const title_gen = RandomStringGen(.{ .max_words = 12 });
     const description_gen = RandomStringGen(.{ .max_words = 105 });
 
+    _ = try gofast.createPerson(.{ .name = "Asen Asenov" });
+    _ = try gofast.createPerson(.{ .name = "Bozhidar Stoyanov" });
+    _ = try gofast.createPerson(.{ .name = "Kaloyan Mitev" });
+
     try gofast.tickets.tickets.ensureTotalCapacity(gofast.tickets.alloc, n_tickets);
+
+    const years_2 = 365 * std.time.ms_per_day;
+    const now_end = Gofast.timestamp();
+    const now_start = now_end - years_2;
 
     for (0..n_tickets) |_| {
         const max_type: Ticket.Type = @intCast(gofast.tickets.name_types.items.len - 1);
         const max_priority: Ticket.Priority = @intCast(gofast.tickets.name_priorities.items.len - 1);
         const max_status: Ticket.Status = @intCast(gofast.tickets.name_statuses.items.len - 1);
+        const max_person: Ticket.Person = @intCast(gofast.tickets.name_people.items.len - 1);
 
         const rand_title = try title_gen.generateWords(random, alloc);
         const rand_desc = try description_gen.generateWords(random, alloc);
@@ -180,15 +189,23 @@ pub fn initGiberish(
         const rand_type = std.rand.intRangeAtMost(random, Ticket.Type, 0, max_type);
         const rand_priority = std.rand.intRangeAtMost(random, Ticket.Priority, 0, max_priority);
         const rand_status = std.rand.intRangeAtMost(random, Ticket.Status, 0, max_status);
+        const rand_creator = std.rand.intRangeAtMost(random, Ticket.Person, 0, max_person);
 
-        _ = gofast.tickets.addOne(
-            rand_title,
-            rand_desc,
-            null,
-            rand_type,
-            rand_priority,
-            rand_status,
-        ) catch unreachable;
+        const rand_create = std.rand.intRangeAtMost(random, i64, now_start, now_end);
+        const rand_update = std.rand.intRangeAtMost(random, i64, rand_create, now_end);
+
+        _ = gofast.tickets.addTicket(.{
+            .title = rand_title,
+            .description = rand_desc,
+            .parent = null,
+            .type_ = rand_type,
+            .priority = rand_priority,
+            .status = rand_status,
+            .creator = rand_creator,
+            .created_on = rand_create,
+            .last_updated_by = rand_creator,
+            .last_updated_on = rand_update,
+        }) catch unreachable;
     }
 
     // Set random parents.

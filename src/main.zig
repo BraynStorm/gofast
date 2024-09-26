@@ -327,6 +327,9 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
     const name_statuses = try sstringArrayToStringArray(alloc, tickets.name_statuses.items);
     defer alloc.free(name_statuses);
 
+    const name_people = try sstringArrayToStringArray(alloc, tickets.name_people.items);
+    defer alloc.free(name_people);
+
     var t_estimated = try alloc.alloc(Ticket.TimeSpent.Seconds, time_spent.len);
     defer alloc.free(t_estimated);
     var t_spent = try alloc.alloc(Ticket.TimeSpent.Seconds, time_spent.len);
@@ -348,6 +351,7 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
             .name_types = name_types,
             .name_priorities = name_priorities,
             .name_statuses = name_statuses,
+            .name_people = name_people,
             // arrays
             .tickets = .{
                 .keys = ticket_slice.items(.key),
@@ -357,6 +361,10 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
                 .types = ticket_slice.items(.type),
                 .priorities = ticket_slice.items(.priority),
                 .statuses = ticket_slice.items(.status),
+                .creators = ticket_slice.items(.creator),
+                .created_on = ticket_slice.items(.created_on),
+                .last_updated_by = ticket_slice.items(.last_updated_by),
+                .last_updated_on = ticket_slice.items(.last_updated_on),
             },
             // multiple arrays
             .ticket_time = .{
@@ -420,6 +428,8 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
                 .priority = @intCast(priority_i64),
                 .type_ = @intCast(type_),
                 .status = @intCast(status),
+                // TODO: Add authentication
+                .creator = 0,
             });
         };
 
@@ -527,4 +537,5 @@ fn sendStaticFile(
 test {
     // Run the tests for Gofast.
     _ = Gofast;
+    _ = Tickets;
 }

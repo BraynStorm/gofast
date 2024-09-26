@@ -79,6 +79,11 @@ pub const Gofast = struct {
         }
     }
 
+    /// Generate a "now" timestamp, in the units expected by Gofast (ms).
+    pub fn timestamp() i64 {
+        return std.time.milliTimestamp();
+    }
+
     /// Create a new ticket, withthe provided parameters
     pub fn createTicket(self: *Self, c: struct {
         title: []const u8,
@@ -87,16 +92,22 @@ pub const Gofast = struct {
         priority: Ticket.Priority = 0,
         type_: Ticket.Type = 0,
         status: Ticket.Status = 0,
+        creator: Ticket.Person,
     }) !Ticket.Key {
+        const now = timestamp();
         const alloc = self.tickets.alloc;
-        return try self.tickets.addOne(
-            try SString.fromSlice(alloc, c.title),
-            try SString.fromSlice(alloc, c.description),
-            c.parent,
-            c.priority,
-            c.type_,
-            c.status,
-        );
+        return try self.tickets.addTicket(.{
+            .title = try SString.fromSlice(alloc, c.title),
+            .description = try SString.fromSlice(alloc, c.description),
+            .parent = c.parent,
+            .priority = c.priority,
+            .type_ = c.type_,
+            .status = c.status,
+            .creator = c.creator,
+            .created_on = now,
+            .last_updated_by = c.creator,
+            .last_updated_on = now,
+        });
     }
 
     /// Delete an existing ticket.
@@ -267,7 +278,7 @@ test Gofast {
 
     try TEST.expect(gf.tickets.max_key == 0);
 
-    const ticket1 = try gf.createTicket(.{ .title = "t", .description = "d" });
+    const ticket1 = try gf.createTicket(.{ .title = "t", .description = "d", .creator = 0 });
     try TEST.expect(ticket1 == 1);
 
     try gf.deleteTicket(ticket1);
@@ -326,13 +337,15 @@ test "Gofast.persistance" {
         const person1 = try gofast.createPerson(.{ .name = "Stoyanov" });
 
         const ticket0 = try gofast.createTicket(.{
-            .title = "Test ticket one",
-            .description = "Test description one",
+            .title = "Test ticket zero",
+            .description = "Test description zero",
+            .creator = person1,
         });
 
         const ticket1 = try gofast.createTicket(.{
             .title = "Test ticket one",
             .description = "Test description one",
+            .creator = person0,
         });
 
         try gofast.giveEstimate(ticket0, person0, 300);
