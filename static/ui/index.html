@@ -29,9 +29,6 @@
   </head>
 
   <body x-data="GOFAST">
-    <!-- TODO: Graphs! -->
-    <!-- <div id="container"></div> -->
-
     <!-- PERF:
       Make this a server-side precompiled template,
       instead of sending multiple fetch() requests.
@@ -45,6 +42,7 @@
         fetch_bit('left_panel'),
         [
           // fetch_bit('inset'),
+          fetch_bit('graph'),
           fetch_bit('ticket_table'),
         ],
         fetch_bit('tooltip'),

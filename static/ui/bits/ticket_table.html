@@ -12,10 +12,8 @@
          
         return `${parseInt(index)+1} ${direction == 0 ? '' : direction > 0 ? '↑' : '↓'}`;
       }
-    " @click="
-    let v = m_table.order.find(x => x[0] === prop);
-    v[1] += 1; if (v[1] >= 2) v[1] -= 3;
-    "></button>
+    "
+      @click="let v = m_table.order.find(x => x[0] === prop); v[1] += 1; if (v[1] >= 2) v[1] -= 3;"></button>
     <!--
     TODO - Right-click => 0
     TODO - Remove from list on 0? There's gotta be a way for the user to move the list's order. Drag? -->
