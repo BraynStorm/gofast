@@ -1,3 +1,71 @@
+/* ==== Ye who reads this, admire this gem from 2022 ====
+
+Text and music: Introvert Junior
+
+Text:
+
+INTRO
+-------------
+Your ears are burning with pleasure . . . from the massage I gave you.
+Don't worry about your boyfriend. You're not about to cheat. I am just innocently massaging your feet . . .
+
+Verse I
+
+Valentina is a web designer. 
+I am standing right behind her.
+She deals with a lot of CSS,
+for her nervous system this is too much stress.
+
+Paddings, margins, shadows, borders . . .
+I massage her tired shoulders.
+I am an optimist, lustful programmist,
+the most wanted sexual terrorist.
+
+Bridge
+--------------------------------------
+Tonight at 8 pm - relationship problem.
+Call your marriage attorney, the programmer is horny.
+
+CHORUS
+-----------------------------------------
+I'm the office tiger and I wanna be your rider.
+Hey, office b****s smile, and enjoy my testosteronish style.
+
+Verse II
+-------------------------------------------------
+Sonya deals with a lot of money-money.
+She is the accountant of the company.
+Her face is a kind of unkind,
+but she looks fantastic from behind.
+
+Rumors say she is insulting her v*****
+with a cheap vibrator made in China.
+They also say she permits some Rock and Roll
+into the depths of the forbidden hole.
+
+BRDIGE
+
+CHORUS
+
+Verse III
+
+The HR Girl with the sexy skirt, 
+I know your brain is plunged in a pinky dirt.
+Show me how you scratch with these french nails,
+I wanna feel it - feel it, in details.
+
+The fuss on my quinces should be wiped off,
+very carefully, slowly and with love.
+Plug and Play, unplug and pray Opsss!
+Some quince jelly on your belly.
+
+BRIDGE
+
+CHORUS
+
+*/
+
+
 /*  Colors  */
 $c1: #F5F9E9; //Ivory          
 $c2: #F9DEC9; //Champagne pink 
@@ -8,10 +76,13 @@ $c5: #14110F; //Smoky Black
 $c6: #A8A8A8; // [FAKE] Grayish 
 $cLink: rgb(0, 102, 204); // [FAKE]
 $cDarken: rgba(0, 0, 0, 0.1); // [FAKE]
+$cGrayBorder: #888;
 
 $insetRound: 10px;
 $insetHeight: 2.5em;
 $scrollPastEnd : 5em;
+$round: 8px;
+
 
 @font-face {
   font-family: 'FQ Italic';
@@ -261,8 +332,9 @@ div#content {
     flex-direction: column;
     justify-content: stretch;
     align-items: stretch;
-    margin-left: 1em;
-    margin-right: 1em;
+    $margin: 1em;
+    margin: 0 $margin;
+    max-width: calc(100vw - $margin * 2);
   }
 }
 
@@ -271,78 +343,75 @@ div#content {
 *******************************************************************************/
 
 
+div.grid-icons {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin: 0 0.7em;
+  border: 1px solid #888;
+  border-radius: $round;
+  overflow: hidden;
+
+  * {
+    user-select: none;
+  }
+
+  &>button {
+    border: 0;
+    padding: 0 0.1em;
+    width: 1.3em;
+    line-height: 0.9em;
+  }
+
+  &>div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    border-left: 1px solid #888;
+
+    &:nth-child(2) {
+      border: 0;
+      border-left: 0;
+    }
+
+    &.selected {
+      background-color: $c2;
+    }
+
+    span {
+      padding: .5em;
+    }
+
+    &>img {
+      padding: .1em;
+      height: 32px;
+      text-align: center;
+      aspect-ratio: 1;
+    }
+  }
+}
+
 // Row: Search
 div.ticket-search {
   display: flex;
-  flex: 1;
-  max-height: 3em;
   margin: 0.3em 0;
-
-  $round: 8px;
+  justify-content: stretch;
 
   &>input[type=search] {
     font-family: 'FQ';
     padding: 0.25em 0.35em;
     display: block;
-    flex: 1;
     border-radius: $round;
+    flex: 1 1 20em;
     border: 1px solid #888;
-  }
-
-
-  &>div.grid {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    margin: 0 0.7em;
-    border: 1px solid #888;
-    border-radius: $round;
-    overflow: hidden;
-
-    * {
-      user-select: none;
-    }
-
-    &>button {
-      border: 0;
-      padding: 0 0.1em;
-      width: 1.3em;
-      line-height: 0.9em;
-    }
-
-    &>div {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background-color: white;
-      border-left: 1px solid #888;
-
-      &:nth-child(2) {
-        border: 0;
-        border-left: 0;
-      }
-
-      &.selected {
-        background-color: $c2;
-      }
-
-      span {
-        padding: .5em;
-      }
-
-      &>img {
-        padding: .1em;
-        height: 32px;
-        text-align: center;
-        aspect-ratio: 1;
-      }
-    }
   }
 }
 
 div.ticket-table {
-  overflow: auto;
-  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
 
   &>div {
     padding: 1em;
@@ -351,7 +420,6 @@ div.ticket-table {
   &>table {
     $border: 1px solid $c6;
     margin-bottom: 4em;
-    width: 100%;
     border: $border;
     padding-right: 2em;
 
@@ -369,6 +437,16 @@ div.ticket-table {
 
       &>td {
         border-bottom: $border;
+        white-space: nowrap;
+
+        &.title {
+          white-space: unset;
+
+          &>div {
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        }
 
         &:first-child {
           padding-left: 0.3em;
@@ -379,7 +457,6 @@ div.ticket-table {
         }
 
         box-sizing: border-box;
-        // padding: 2px 5px;
 
         &.icon {
           text-align: center;
@@ -392,13 +469,7 @@ div.ticket-table {
         }
 
 
-        &:nth-child(1),
-        &:nth-child(3),
-        &:nth-child(5),
-        &:nth-child(6),
-        &:nth-child(7) {
-          text-wrap: nowrap;
-        }
+        &:nth-child(7) {}
 
 
         &>a.ticket {
@@ -436,7 +507,7 @@ div.ticket-table {
   background-size: contain;
   padding: 0;
   border: 0;
-  height: 2em;
+  // height: 2em;
   aspect-ratio: 1;
   cursor: pointer;
 
@@ -488,6 +559,14 @@ button.btn-checkmark {
   @include svg-button("checkmark");
 }
 
+button.btn-pencil-h {
+  @include svg-button("pencil_h");
+}
+
+button.btn-pencil-45 {
+  @include svg-button("pencil_45");
+}
+
 /******************************************************************************
  *** Tooltip ***
  ******************************************************************************/
@@ -510,5 +589,92 @@ div.tooltip {
 
   &>img {
     width: 2em;
+  }
+}
+
+div.modal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background-color: rgba(0, 0, 0, 0.5);
+
+  &>div.new-ticket {
+    box-shadow: 0 0 100px 0px rgba(0, 0, 0);
+    padding: 2em;
+    border-radius: 20px;
+    background-color: $c1;
+    display: flex;
+    flex-direction: column;
+    flex: 0.4;
+    $lineNumberWidth: 30px;
+
+    &>input[type=text].title {
+      border-radius: 8px;
+      border: 1px solid $c6;
+      padding: 0.5em 0.5em;
+      font-size: 1.3em;
+      font-family: 'FQ';
+
+      font-weight: bold;
+      text-align: center;
+      outline: none;
+      box-sizing: border-box;
+
+      &.as-heading {
+        /*NOTE:
+          For some reason, this ends up 2 pixels smaller, so I added this hot-glue here.
+          Please don't wait for it to __dry out__ before finding a real solution.
+        */
+        margin-left: $lineNumberWidth + 2;
+
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        border-bottom: 0;
+      }
+
+      &::placeholder {
+        font-weight: normal;
+        font-style: italic;
+        font-size: 0.8em;
+      }
+    }
+
+    & .CodeMirror {
+      border: 1px solid $c6;
+      border-radius: $round;
+      border-top-right-radius: 0;
+    }
+
+    /* Show the line-numbers with an exact width */
+    & .CodeMirror-linenumbers {
+      width: $lineNumberWidth;
+    }
+
+    /* Make the placeholder italic */
+    & .CodeMirror-empty {
+      font-style: italic;
+    }
+
+    &>div.icon-selectors {
+      display: flex;
+      justify-content: space-evenly;
+
+      &>div.grid-icons {
+        margin-top: 0.3em;
+        margin-bottom: 0.5em;
+
+        &:nth-child(2) {
+          margin-left: 0;
+        }
+      }
+    }
+
   }
 }

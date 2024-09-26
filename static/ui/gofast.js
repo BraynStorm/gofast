@@ -1,5 +1,13 @@
 const ARROW = ' ➤ ';
 
+const TITLE_PLACEHOLDERS = [
+    "“I have made this [letter] longer than usual because I have not had time to make it shorter.” —Blaise Pascal",
+    "“It is my ambition to say in ten sentences what others say in a whole book.” ―Friedrich Nietzsche"
+];
+function random_title_placeholder() {
+    const randomIndex = Math.floor(Math.random() * TITLE_PLACEHOLDERS.length);
+    return TITLE_PLACEHOLDERS[randomIndex];
+}
 
 function display_key(key, max_key) {
     const padding = parseInt(Math.ceil(Math.log10(max_key + 1)));
@@ -7,7 +15,7 @@ function display_key(key, max_key) {
 }
 
 
-function fmt_time(t) {
+function fmt_time_exact(t) {
     const seconds = Number(t);
     const d = Math.floor(seconds / (3600 * 8));
     const h = Math.floor(seconds % (3600 * 8) / 3600);
@@ -19,6 +27,24 @@ function fmt_time(t) {
     const mDisplay = m > 0 ? (m + "m ") : "";
     const sDisplay = s > 0 ? (s + "s ") : "";
     return (dDisplay + hDisplay + mDisplay + sDisplay).trimEnd();
+}
+function fmt_time(t) {
+    const seconds = Number(t);
+    const d = Math.floor(seconds / (3600 * 8));
+    const h = Math.floor(seconds % (3600 * 8) / 3600);
+    const m = Math.floor(seconds % 3600 / 60);
+    // const s = Math.floor(seconds % 60);
+
+    const epsilon = 0.999;
+    if (d > 0) {
+        return "~" + Math.floor(d + epsilon) + "d";
+    } else if (h > 0) {
+        return "~" + Math.floor(h + epsilon) + "h";
+    } else if (m > 0) {
+        return "~" + Math.floor(m + epsilon) + "m";
+    } else {
+        return ""
+    }
 }
 
 function array_remove(array, item) {
@@ -65,6 +91,7 @@ document.addEventListener("alpine:init", () => {
         },
         // Model: New Ticket.
         m_nt: {
+            show: false,
             title: "",
             description: "",
             maybe_parent: null,
@@ -109,6 +136,11 @@ document.addEventListener("alpine:init", () => {
                 const priorities = r.tickets.priorities;
                 const statuses = r.tickets.statuses;
 
+                const creators = r.tickets.creators;
+                const created_on = r.tickets.created_on;
+                const last_updated_by = r.tickets.last_updated_by;
+                const last_updated_on = r.tickets.last_updated_on;
+
                 console.log(`-> /api/tickets -> ${keys.length}/${count} ticket(s), max_key=${max_key}`);
 
                 const tickets = {};
@@ -124,44 +156,47 @@ document.addEventListener("alpine:init", () => {
                         type: types[i],
                         priority: priorities[i],
                         status: statuses[i],
+                        creator: creators[i],
+                        created_on: new Date(created_on[i]),
+                        last_updated_by: last_updated_by[i],
+                        last_updated_on: new Date(last_updated_on[i]),
                     }
                 }
-                this.tickets = tickets;
 
                 // Load the ticket_time table.
-                const ticket_time = r.ticket_time;
-                const ticket_keys = ticket_time.tickets;
-                const people = ticket_time.people;
-                const estimates = ticket_time.estimates;
-                const spent_ = ticket_time.spent;
+                const ticket_times = r.ticket_time;
+                const ticket_keys = ticket_times.tickets;
+                const people = ticket_times.people;
+                const estimates = ticket_times.estimates;
+                const spent_ = ticket_times.spent;
 
-                const result = { estimate: {}, spent: {} };
-                if (0) {
-                    for (let i = 0; i < ticket_keys.length; ++i) {
-                        const key = ticket_keys[i];
-                        const person = people[i];
-                        const estimate = estimates[i];
-                        const spent = spent_[i];
+                const ticket_time = { estimate: {}, spent: {} };
+                for (let i = 0; i < ticket_keys.length; ++i) {
+                    const key = ticket_keys[i];
+                    const person = people[i];
+                    const estimate = estimates[i];
+                    const spent = spent_[i];
 
-                        if (!(key in result.estimate)) {
-                            result.estimate[key] = {};
-                        }
-                        if (!(key in result.spent)) {
-                            result.spent[key] = {};
-                        }
-
-                        let e = result.estimate[key] || 0;
-                        let ep = e[person] || 0;
-                        ep += estimate;
-                        result.estimate[key][person] = ep;
-
-                        let s = result.spent[key] || 0;
-                        let sp = s[person] || 0;
-                        sp += spent;
-                        result.spent[key][person] = sp;
+                    if (!(key in ticket_time.estimate)) {
+                        ticket_time.estimate[key] = {};
                     }
+                    if (!(key in ticket_time.spent)) {
+                        ticket_time.spent[key] = {};
+                    }
+
+                    let e = ticket_time.estimate[key] || 0;
+                    let ep = e[person] || 0;
+                    ep += estimate;
+                    ticket_time.estimate[key][person] = ep;
+
+                    let s = ticket_time.spent[key] || 0;
+                    let sp = s[person] || 0;
+                    sp += spent;
+                    ticket_time.spent[key][person] = sp;
                 }
-                this.ticket_time = result;
+
+                this.tickets = tickets;
+                this.ticket_time = ticket_time;
 
                 /*TODO:
                     Implement a graph visualization of ticket relationships.
@@ -354,8 +389,6 @@ document.addEventListener("alpine:init", () => {
             return this.names.type[type_id];
         },
         progress(key) {
-            return { spent: 0, estimate: 0 };
-
             const estimate = this.ticket_time.estimate[key];
             const spent = this.ticket_time.spent[key];
 

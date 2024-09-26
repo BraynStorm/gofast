@@ -1,0 +1,85 @@
+
+<template
+  x-if="m_nt.show"
+  x-data="{
+    e_desc: true,
+    cm: undefined,
+  }">
+  <div class="modal" @keyup.escape.window="m_nt.show = false">
+    <div class="new-ticket">
+
+      <h1>New ticket...</h1>
+      <h4>I can't imagine...</h4>
+
+      <!-- Selectors fro Type, Priority -->
+      <div class="icon-selectors">
+        <template x-data="{
+        props: [
+          ['type',     id => '<img src=' + type_icon(id) + '>'],
+          ['priority', id => '<img src=' + priority_icon(id) + '>'],
+          ['status',   id => '<span>' + status_name(id) + '</span>'],
+        ]
+      }" x-for="([prop, fn]) in props" :key="prop">
+          <div class="grid-icons">
+            <template x-for="_, id in names[prop]" :key="id">
+              <div :class="m_nt[prop] === id ? 'selected' : ''"
+                @click="m_nt[prop] = id" x-html="fn(id)">
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <input type="text" :placeholder="random_title_placeholder"
+        :class="`title ${e_desc ? 'as-heading' : ''}`"
+        x-model="m_nt.title">
+
+      <div x-show="e_desc" class="description md-editor">
+        <div x-init="
+          cm = CodeMirror.fromTextArea($el.parentNode.querySelector('textarea'), {
+            value: m_nt.description,
+            keymap: 'default',
+            lineNumbers: true,
+            lineWrapping: true,
+            mode: 'markdown',
+          });
+        ">
+        </div>
+        <textarea
+          placeholder="... and by that I mean this really convoluted idea:
+1. 
+2.
+3.
+
+[ supports Markdown 😉 by the way  ]
+"></textarea>
+      </div>
+
+      <div x-show="!e_desc" class="description">
+        <div x-html="simpleMarkdown(m_nt.description)"></div>
+      </div>
+
+      <div class="controls down">
+        <button
+          class="btn-checkmark text"
+          x-show="e_desc"
+          @click="
+            m_nt.description = cm.getValue();
+            cm = undefined;
+            e_desc = false;
+          ">
+          Preview Markdown
+        </button>
+        <button x-show="!e_desc" @click="e_desc=true"
+          class="btn-pencil-45 text">Edit</button>
+      </div>
+
+      <div class="controls down">
+        <button @click="m_nt.show = false"
+          class="btn-cross text">Cancel</button>
+        <button @click="alert('NYI')"
+          class="btn-plus text">Create</button>
+      </div>
+    </div>
+  </div>
+</template>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="106.65172"
+   height="93.196526"
+   viewBox="0 0 28.218266 24.658247"
+   version="1.1"
+   id="svg1"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <style
+     id="style1">.icon { stroke-width:0.3px; }
+</style>
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient230">
+      <stop
+         style="stop-color:#a7b7e2;stop-opacity:1;"
+         offset="0"
+         id="stop230" />
+      <stop
+         style="stop-color:#573b36;stop-opacity:1;"
+         offset="1"
+         id="stop231" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient221">
+      <stop
+         style="stop-color:#b9703b;stop-opacity:1;"
+         offset="0"
+         id="stop222" />
+      <stop
+         style="stop-color:#ee9f68;stop-opacity:1;"
+         offset="1"
+         id="stop221" />
+    </linearGradient>
+    <color-profile
+       name="sRGB-IEC61966-2.1"
+       xlink:href="../../../../../../Windows/system32/spool/drivers/color/sRGB%20Color%20Space%20Profile.icm"
+       id="color-profile2" />
+    <radialGradient
+       xlink:href="#linearGradient230"
+       id="radialGradient231"
+       cx="6.1966643"
+       cy="218.14864"
+       fx="6.1966643"
+       fy="218.14864"
+       r="10.847916"
+       gradientTransform="matrix(0.68985996,1.2417487,-1.9447666,1.0804252,442.22273,-40.070438)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       xlink:href="#linearGradient221"
+       id="linearGradient233"
+       x1="7.1437497"
+       y1="231.77498"
+       x2="14.022917"
+       y2="231.77498"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-127.76992,-58.814399)" />
+  </defs>
+  <g
+     id="layer22"
+     transform="translate(-21.213087,-190.49999)">
+    <rect
+       style="fill:url(#linearGradient233);stroke:#000000;stroke-width:0.529167;stroke-linejoin:round;stroke-miterlimit:7.4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect46"
+       width="4.2333326"
+       height="17.991671"
+       x="-119.30327"
+       y="166.6106"
+       transform="rotate(-45)" />
+    <path
+       id="rect229"
+       style="fill:url(#radialGradient231);fill-opacity:1;stroke:#000000;stroke-width:0.529167;stroke-linejoin:round;stroke-miterlimit:7.4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 21.47766,202.17163 5.98684,5.98684 14.557837,-14.55784 -2.472265,-2.47226 c -3.770309,3.04271 -6.665342,-0.36381 -6.665342,-0.36381 z" />
+  </g>
+</svg>
