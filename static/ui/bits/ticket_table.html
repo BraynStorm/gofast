@@ -2,7 +2,7 @@
   <input type="search" placeholder="Search...">
 
   <!-- Grid-checkboxes for Priority -->
-  <div class="grid-icons" x-data="{ prop:'priority' }">
+  <div class="icon-grid" x-data="{ prop:'priority' }">
     <button class="sort" x-text="
       let index = m_table.order.findIndex(x => x[0] === prop)
       if (index === -1) { 
@@ -34,7 +34,7 @@
   </div>
 
   <!-- Grid-checkboxes for Type -->
-  <div class="grid-icons">
+  <div class="icon-grid">
     <!-- <div x-text="m_table.search.type.map(x=>type_name(x)).join(', ')"></div> -->
     <template x-for="_, id in names.type" :key="id">
       <div :class="m_table.search.type.includes(id) ? 'selected' : ''"
@@ -53,7 +53,7 @@
   </div>
 
   <!-- Grid-checkboxes for Status -->
-  <div class="grid-icons">
+  <div class="icon-grid">
     <!-- <div x-text="m_table.search.status.map(x=>status_name(x)).join(', ')"></div> -->
     <template x-for="_, id in names.status" :key="id">
       <div :class="m_table.search.status.includes(id) ? 'selected' : ''"

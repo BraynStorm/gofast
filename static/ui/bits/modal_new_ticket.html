@@ -20,7 +20,7 @@
           ['status',   id => '<span>' + status_name(id) + '</span>'],
         ]
       }" x-for="([prop, fn]) in props" :key="prop">
-          <div class="grid-icons">
+          <div class="icon-grid">
             <template x-for="_, id in names[prop]" :key="id">
               <div :class="m_nt[prop] === id ? 'selected' : ''"
                 @click="m_nt[prop] = id" x-html="fn(id)">

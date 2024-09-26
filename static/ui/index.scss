@@ -343,7 +343,7 @@ div#content {
 *******************************************************************************/
 
 
-div.grid-icons {
+div.icon-grid {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -351,6 +351,8 @@ div.grid-icons {
   border: 1px solid #888;
   border-radius: $round;
   overflow: hidden;
+  background-color: #888;
+  gap: 1px;
 
   * {
     user-select: none;
@@ -369,12 +371,8 @@ div.grid-icons {
     align-items: center;
     justify-content: center;
     background-color: white;
-    border-left: 1px solid #888;
-
-    &:nth-child(2) {
-      border: 0;
-      border-left: 0;
-    }
+    flex: 1 1 2em;
+    text-wrap: nowrap;
 
     &.selected {
       background-color: $c2;
@@ -385,8 +383,8 @@ div.grid-icons {
     }
 
     &>img {
-      padding: .1em;
       height: 32px;
+      padding: .1em;
       text-align: center;
       aspect-ratio: 1;
     }
@@ -438,6 +436,7 @@ div.ticket-table {
       &>td {
         border-bottom: $border;
         white-space: nowrap;
+        box-sizing: border-box;
 
         &.title {
           white-space: unset;
@@ -455,8 +454,6 @@ div.ticket-table {
         &:last-child {
           padding-right: 0.3em;
         }
-
-        box-sizing: border-box;
 
         &.icon {
           text-align: center;
@@ -666,7 +663,7 @@ div.modal {
       display: flex;
       justify-content: space-evenly;
 
-      &>div.grid-icons {
+      &>div.icon-grid {
         margin-top: 0.3em;
         margin-bottom: 0.5em;
 
