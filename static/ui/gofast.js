@@ -134,8 +134,9 @@ document.addEventListener("alpine:init", () => {
                 const titles = r.tickets.titles;
                 const descriptions = r.tickets.descriptions;
                 const types = r.tickets.types;
-                const priorities = r.tickets.priorities;
                 const statuses = r.tickets.statuses;
+                const priorities = r.tickets.priorities;
+                const orders = r.tickets.orders;
 
                 const creators = r.tickets.creators;
                 const created_on = r.tickets.created_on;
@@ -154,9 +155,17 @@ document.addEventListener("alpine:init", () => {
                         title: titles[i],
                         description: descriptions[i],
                         parent: parents[i],
+                        /* TODO(bozho2):
+                            Handle "negative"
+                                types
+                                statuses
+                                priorities
+                            as they are u8s in the backend.
+                        */
                         type: types[i],
-                        priority: priorities[i],
                         status: statuses[i],
+                        priority: priorities[i],
+                        order: orders[i],
                         creator: creators[i],
                         created_on: new Date(created_on[i]),
                         last_updated_by: last_updated_by[i],
@@ -164,7 +173,6 @@ document.addEventListener("alpine:init", () => {
                         /* NOTE(bozho2):
                             Experiment!
                         */
-                        order: i,
                     }
                 }
 
@@ -277,7 +285,7 @@ document.addEventListener("alpine:init", () => {
             return entries.map(([k, t]) => [parseInt(k), t]);
         },
         ui_should_enable_reorder() {
-           return this.m_table.order[0][0] === 'priority';
+            return this.m_table.order[0][0] === 'priority';
         },
         /**
          * Called with the ticket key that has been manually reordered ("sorted")
@@ -286,20 +294,31 @@ document.addEventListener("alpine:init", () => {
          * Position is a relative index in the current ui_filter_tickets() table.
          * Gets called **before** the modification of the sorting order.
          */
-        ui_on_reorder_item_to(key, new_position) {
-            const tickets = this.tickets;
-            const ticket = tickets[key];
-            const priority = ticket.priority
+        ui_on_reorder_item_to(ticket, new_position) {
             const sorted_tickets = this.ui_filter_tickets();
+            const key = ticket.key;
             const old_position = sorted_tickets.findIndex(x => x[0] == key);
 
             console.log(`${key} moved from ${old_position} to ${new_position}`);
 
             // Figure out the the location of the new 
-            if (new_position == 0) {
+            if (new_position === 0) {
                 // Top dog
-            } else if (new_position == sorted_tickets.length - 1) {
+                const below = sorted_tickets[0][1];
+                if (below.priority !== ticket.priority) {
+                    // We're above "all" other of the same priority.
+                    ticket.priority = below.priority;
+                }
+                // We're above some other priority even, convert to it first.
+                ticket.order = below.order - 1;
+            } else if (new_position === sorted_tickets.length - 1) {
                 // Dropped at the end of the current view.
+                const above = sorted_tickets[sorted_tickets.length - 1][1];
+                if (above.priority !== ticket.priority) {
+                    // We're below "all" other of the same priority.
+                    ticket.priority = above.priority;
+                }
+                ticket.order = above.order + 1;
             } else {
                 const above = sorted_tickets[(old_position > new_position ? new_position - 1 : new_position)][1];
                 const below = sorted_tickets[(old_position > new_position ? new_position : new_position + 1)][1];
@@ -311,7 +330,6 @@ document.addEventListener("alpine:init", () => {
                     if (ticket.priority !== above.priority) {
                         ticket.priority = above.priority;
                     }
-
                     ticket.order = (above.order + below.order) * 0.5;
                 } else {
                     /* If at least on of our neighbours matches our priority,
@@ -324,6 +342,14 @@ document.addEventListener("alpine:init", () => {
                     } else {
                         /* Well, neither of our neighbours is the same priority
                         as us... Don't  */
+                        const np = this.names.priority;
+                        const name_old = np[ticket.priority];
+                        const name_above = np[above.priority];
+                        const name_below = np[below.priority];
+                        confirm(`You dropped this ticket (${name_old}) between (${name_below}) and (${name_above}).`)
+                        /* TODO: Find a way to choose which priority to assign.
+                            Or somehow ask 
+                        */
                     }
                 }
             }

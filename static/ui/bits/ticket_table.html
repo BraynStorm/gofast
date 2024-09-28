@@ -74,7 +74,7 @@
       :key="`${key} ${t.priority} ${t.order}`">
       <!-- @click="edit_ticket(t.key)" -->
       <tr :id="display_key(t.key)"
-        x-sort:item="t.key"
+        x-sort:item="t"
         class="ticket"
         :class="t.key == m_table.highlight_key ? 'highlight': ''">
         <td class="handle"><span x-sort:handle>≡</span></td>
@@ -95,6 +95,7 @@
             x-text="`${fmt_time(left)} (${parseInt(Math.min(p, 1)*100)}%)`">
           </div>
         </td>
+        <td x-text="t.order"></td>
         <td class="created" x-text="t.created_on.toLocaleString()"></td>
         <td class="status" x-text="status_name(t.status)"></td>
         <td class="title"

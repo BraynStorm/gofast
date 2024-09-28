@@ -299,6 +299,21 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
     const descriptions = try sstringArrayToStringArray(alloc, ticket_slice.items(.description));
     defer alloc.free(descriptions);
 
+    const types = try alloc.alloc(Ticket.Type, len);
+    defer alloc.free(types);
+    const statuses = try alloc.alloc(Ticket.Status, len);
+    defer alloc.free(statuses);
+    const priorities = try alloc.alloc(Ticket.Priority, len);
+    defer alloc.free(priorities);
+    const orders = try alloc.alloc(Ticket.Order, len);
+    defer alloc.free(orders);
+    for (tickets.tickets.items(.details), 0..) |d, i| {
+        types[i] = d.type;
+        statuses[i] = d.status;
+        priorities[i] = d.priority;
+        orders[i] = d.order;
+    }
+
     const name_priorities = try sstringArrayToStringArray(alloc, tickets.name_priorities.items);
     defer alloc.free(name_priorities);
 
@@ -320,6 +335,8 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
         t_spent[i] = tt.spent;
     }
 
+    // comptime std.debug.assert(@sizeOf(Ticket.Details) == @sizeOf(u64));
+
     {
         gofast.lock.lockShared();
         defer gofast.lock.unlockShared();
@@ -335,13 +352,16 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
             .name_people = name_people,
             // arrays
             .tickets = .{
+                // .details = @as([*]u64, @ptrCast(ticket_slice.items(.details).ptr))[0..len],
                 .keys = ticket_slice.items(.key),
                 .parents = ticket_slice.items(.parent),
                 .titles = titles,
                 .descriptions = descriptions,
-                .types = ticket_slice.items(.type),
-                .priorities = ticket_slice.items(.priority),
-                .statuses = ticket_slice.items(.status),
+                //NOTE(bozho2): JSON treats slices of u8 as strings...
+                .types = @as([*]i8, @ptrCast(types.ptr))[0..len],
+                .statuses = @as([*]i8, @ptrCast(statuses.ptr))[0..len],
+                .priorities = @as([*]i8, @ptrCast(priorities.ptr))[0..len],
+                .orders = orders,
                 .creators = ticket_slice.items(.creator),
                 .created_on = ticket_slice.items(.created_on),
                 .last_updated_by = ticket_slice.items(.last_updated_by),

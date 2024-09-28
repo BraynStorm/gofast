@@ -128,6 +128,7 @@ pub const Gofast = struct {
         parent: ??Ticket.Key = null,
         status: ?Ticket.Status = null,
         priority: ?Ticket.Priority = null,
+        order: ?Ticket.Order = null,
         type: ?Ticket.Type = null,
     }) !void {
         const alloc = self.tickets.alloc;
@@ -140,9 +141,10 @@ pub const Gofast = struct {
         //TODO:
         //  Record the changes in some history structure.
 
-        if (u.type) |p| slice.items(.type)[index] = p;
-        if (u.priority) |p| slice.items(.priority)[index] = p;
-        if (u.status) |p| slice.items(.status)[index] = p;
+        if (u.type) |p| slice.items(.details)[index].type = p;
+        if (u.status) |p| slice.items(.details)[index].status = p;
+        if (u.priority) |p| slice.items(.details)[index].priority = p;
+        if (u.order) |p| slice.items(.details)[index].order = p;
         if (u.parent) |p| {
             //PERF:
             // Can optimize this by reusing the index we already found in the code above.

@@ -11,23 +11,30 @@ pub const Ticket = struct {
     title: SString,
     description: SString,
 
-    /// Bug, Task, etc.
-    type: Type = 0,
-    /// High, Normal, Low, etc.
-    priority: Priority = 0,
-    /// ToDo, InProgress, Done, etc.
-    status: Status = 0,
-
+    details: Details,
     creator: Person,
     created_on: i64,
     last_updated_by: Person,
     last_updated_on: i64,
 
     pub const Key = u32;
-    pub const Type = i8;
-    pub const Priority = i8;
-    pub const Status = i8;
+    pub const Type = u8;
+    pub const Priority = u8;
+    pub const Status = u8;
+    pub const Order = f32;
     pub const Person = u32;
+    pub const Details = packed struct {
+        /// Padding, TODO: Find something else to put here.
+        _padding: u8 = 0,
+        /// Bug, Task, etc.
+        type: Type = 0,
+        /// ToDo, InProgress, Done, etc.
+        status: Status = 0,
+        /// High, Normal, Low, etc.
+        priority: Priority = 0,
+        /// Sub-priority
+        order: Order,
+    };
 
     // const Index = usize;
     pub const LinkType = enum(u8) {
@@ -213,9 +220,13 @@ pub const TicketStore = struct {
         var allslice = self.tickets.slice();
 
         for (allslice.items(.key)) |*i| i.* = try reader.readInt(u32, .little);
-        for (allslice.items(.type)) |*i| i.* = try reader.readInt(i8, .little);
-        for (allslice.items(.priority)) |*i| i.* = try reader.readInt(i8, .little);
-        for (allslice.items(.status)) |*i| i.* = try reader.readInt(i8, .little);
+        for (allslice.items(.details)) |*i| {
+            i.type = try reader.readInt(u8, .little);
+            i.status = try reader.readInt(u8, .little);
+            i.priority = try reader.readInt(u8, .little);
+            comptime std.debug.assert(@sizeOf(u32) == @sizeOf(Ticket.Order));
+            i.order = @bitCast(try reader.readInt(u32, .little));
+        }
         for (allslice.items(.creator)) |*i| i.* = try reader.readInt(u32, .little);
         for (allslice.items(.created_on)) |*i| i.* = try reader.readInt(i64, .little);
         for (allslice.items(.last_updated_by)) |*i| i.* = try reader.readInt(u32, .little);
@@ -338,9 +349,13 @@ pub const TicketStore = struct {
         //--priority
         //--status
         for (allslice.items(.key)) |e| try writer.writeInt(u32, e, .little);
-        for (allslice.items(.type)) |e| try writer.writeInt(i8, e, .little);
-        for (allslice.items(.priority)) |e| try writer.writeInt(i8, e, .little);
-        for (allslice.items(.status)) |e| try writer.writeInt(i8, e, .little);
+        for (allslice.items(.details)) |e| {
+            try writer.writeInt(u8, e.type, .little);
+            try writer.writeInt(u8, e.status, .little);
+            try writer.writeInt(u8, e.priority, .little);
+            comptime std.debug.assert(@sizeOf(u32) == @sizeOf(Ticket.Order));
+            try writer.writeInt(u32, @bitCast(e.order), .little);
+        }
         for (allslice.items(.creator)) |e| try writer.writeInt(u32, e, .little);
         for (allslice.items(.created_on)) |e| try writer.writeInt(i64, e, .little);
         for (allslice.items(.last_updated_by)) |e| try writer.writeInt(u32, e, .little);
@@ -427,9 +442,12 @@ pub const TicketStore = struct {
             .title = c.title,
             .description = c.description,
             .parent = null,
-            .type = c.type_,
-            .priority = c.priority,
-            .status = c.status,
+            .details = .{
+                .type = c.type_,
+                .status = c.status,
+                .priority = c.priority,
+                .order = @floatFromInt(key),
+            },
             .creator = c.creator,
             .created_on = c.created_on,
             .last_updated_by = c.last_updated_by,
