@@ -237,28 +237,45 @@ pub const TicketStore = struct {
         for (0..n_tickets) |i| {
             parents[i] = null;
         }
-        const n_graphs = try reader.readInt(u32, .little);
-        if (n_graphs != 1) return error.CorruptedGraph;
+        const n_graphs = try reader.readInt(usize, .little);
+        for (0..n_graphs) |i_graph| {
+            // Unused for now
+            _ = i_graph;
 
-        const link_type = try reader.readInt(u8, .little);
-        if (link_type != 0)
-            return error.CorruptedChildGraph;
+            switch (try reader.readInt(u8, .little)) {
+                // Child Graph
+                0 => {
+                    const n_graph_len = try reader.readInt(usize, .little);
+                    // log.debug("loadFromV0: n_graph_len={}", .{n_graph_len});
 
-        const n_graph_len = try reader.readInt(usize, .little);
-        try self.graph_children.ensureTotalCapacity(self.alloc, n_graph_len);
-        // log.debug("loadFromV0: n_graph_len={}", .{n_graph_len});
-
-        // Proceed to read only the parent->children graph.
-        for (0..n_graph_len) |_| {
-            const parent = try reader.readInt(u32, .little);
-            const n_children = @sizeOf(Ticket.FatLink.To) / @sizeOf(u32);
-            for (0..n_children) |_| {
-                const child = try reader.readInt(u32, .little);
-                if (child != 0) {
-                    // log.debug("loadFromV0: setParent({}, {})", .{ child, parent });
-                    try self.setParent(child, parent);
-                }
+                    try self.graph_children.resize(self.alloc, n_graph_len);
+                    for (self.graph_children.items(.from)) |*from| {
+                        from.* = try reader.readInt(u32, .little);
+                    }
+                    for (self.graph_children.items(.to)) |*to| {
+                        for (0..Ticket.FatLink.To.capacity) |i| {
+                            to.*.items[i] = try reader.readInt(u32, .little);
+                        }
+                    }
+                },
+                else => return error.UnknownGraphType,
             }
+        }
+
+        // Read ticket_time_spent
+        {
+            const n_time_spent = try reader.readInt(usize, .little);
+            try self.ticket_time_spent.resize(self.alloc, n_time_spent);
+            const time_spent_slice = self.ticket_time_spent.slice();
+
+            const ts_people = time_spent_slice.items(.person);
+            const ts_time = time_spent_slice.items(.time);
+            for (time_spent_slice.items(.ticket)) |*ticket| ticket.* = try reader.readInt(u32, .little);
+            for (0..n_time_spent) |i| ts_people[i] = try reader.readInt(u32, .little);
+            for (0..n_time_spent) |i| ts_time[i] = .{
+                .estimate = try reader.readInt(u32, .little),
+                .spent = try reader.readInt(u32, .little),
+            };
         }
     }
     pub fn deinit(self: *Self) void {
@@ -342,25 +359,40 @@ pub const TicketStore = struct {
             try writer.writeAll(e.s);
         }
 
-        //n_children_graph
-        try writer.writeInt(u32, 1, .little);
+        {
+            //n_graphs
+            try writer.writeInt(usize, 1, .little);
 
-        //linktype=child
-        const child = 0; // Ticket.LinkType.child
-        try writer.writeInt(u8, child, .little);
+            //linktype=child
+            const child = 0; // Ticket.LinkType.child
+            try writer.writeInt(u8, child, .little);
 
-        const children = self.graph_children.slice();
+            const children = self.graph_children.slice();
 
-        //n_graph_nodes
-        try writer.writeInt(usize, children.len, .little);
+            //n_graph_nodes
+            try writer.writeInt(usize, children.len, .little);
 
-        //-graph
-        //--from
-        //--to
-        for (children.items(.from), children.items(.to)) |f, t| {
-            try writer.writeInt(u32, f, .little);
-            for (t.array()) |c| {
-                try writer.writeInt(u32, c, .little);
+            for (children.items(.from)) |from| try writer.writeInt(u32, from, .little);
+            for (children.items(.to)) |*to| {
+                for (&to.array()) |to_child| {
+                    try writer.writeInt(u32, to_child, .little);
+                }
+            }
+        }
+
+        // ticket_time_spent
+        {
+            const ticket_time_slice = self.ticket_time_spent.slice();
+            try writer.writeInt(usize, ticket_time_slice.len, .little);
+            for (ticket_time_slice.items(.ticket)) |ticket| {
+                try writer.writeInt(u32, ticket, .little);
+            }
+            for (ticket_time_slice.items(.person)) |person| {
+                try writer.writeInt(u32, person, .little);
+            }
+            for (ticket_time_slice.items(.time)) |time| {
+                try writer.writeInt(u32, time.estimate, .little);
+                try writer.writeInt(u32, time.spent, .little);
             }
         }
     }

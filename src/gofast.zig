@@ -300,6 +300,7 @@ test "Gofast.persistance" {
             return e;
         },
     };
+    defer std.fs.cwd().deleteFile(filepath) catch unreachable;
 
     // Create the persistance file with some known data.
     {
@@ -333,23 +334,35 @@ test "Gofast.persistance" {
         try TEST.expectEqual(3, tickets.name_types.items.len);
 
         // People
-        const person0 = try gofast.createPerson(.{ .name = "Bozhidar" });
-        const person1 = try gofast.createPerson(.{ .name = "Stoyanov" });
+        const person1 = try gofast.createPerson(.{ .name = "Bozhidar" });
+        const person2 = try gofast.createPerson(.{ .name = "Stoyanov" });
 
-        const ticket0 = try gofast.createTicket(.{
-            .title = "Test ticket zero",
-            .description = "Test description zero",
+        const ticket1 = try gofast.createTicket(.{
+            .title = "Test ticket 1",
+            .description = "Test description 1",
             .creator = person1,
         });
 
-        const ticket1 = try gofast.createTicket(.{
-            .title = "Test ticket one",
-            .description = "Test description one",
-            .creator = person0,
+        const ticket2 = try gofast.createTicket(.{
+            .title = "Test ticket 2",
+            .description = "Test description 2",
+            .creator = person2,
         });
 
-        try gofast.giveEstimate(ticket0, person0, 300);
-        try gofast.logWork(ticket1, person1, 0, 600);
+        const ticket3 = try gofast.createTicket(.{
+            .title = "Test ticket 3",
+            .description = "Test description 3",
+            .creator = person1,
+        });
+
+        try gofast.giveEstimate(ticket1, person1, 300);
+        try gofast.giveEstimate(ticket1, person2, 350);
+
+        try gofast.giveEstimate(ticket3, person2, 1200);
+
+        try gofast.logWork(ticket2, person2, 0, 600);
+        try gofast.logWork(ticket3, person1, 0, 120);
+        try gofast.logWork(ticket1, person1, 0, 6000);
         try gofast.save();
     }
 
@@ -375,8 +388,41 @@ test "Gofast.persistance" {
         try TEST.expectEqualStrings("Bozhidar", gofast.personName(0));
         try TEST.expectEqualStrings("Stoyanov", gofast.personName(1));
 
-        try TEST.expectEqual(2, tickets.tickets.len);
-        try TEST.expectEqual(0, tickets.ticket_time_spent.len);
+        try TEST.expectEqual(3, tickets.tickets.len);
+        try TEST.expectEqual(5, tickets.ticket_time_spent.len);
+
+        const person1 = 0;
+        const person2 = 1;
+
+        const time_spent0 = tickets.ticket_time_spent.get(0);
+        try TEST.expectEqual(person1, time_spent0.person);
+        try TEST.expectEqual(1, time_spent0.ticket);
+        try TEST.expectEqual(300, time_spent0.time.estimate);
+        try TEST.expectEqual(6000, time_spent0.time.spent);
+
+        const time_spent1 = tickets.ticket_time_spent.get(1);
+        try TEST.expectEqual(person2, time_spent1.person);
+        try TEST.expectEqual(1, time_spent1.ticket);
+        try TEST.expectEqual(350, time_spent1.time.estimate);
+        try TEST.expectEqual(0, time_spent1.time.spent);
+
+        const time_spent2 = tickets.ticket_time_spent.get(2);
+        try TEST.expectEqual(person2, time_spent2.person);
+        try TEST.expectEqual(3, time_spent2.ticket);
+        try TEST.expectEqual(1200, time_spent2.time.estimate);
+        try TEST.expectEqual(0, time_spent2.time.spent);
+
+        const time_spent3 = tickets.ticket_time_spent.get(3);
+        try TEST.expectEqual(person2, time_spent3.person);
+        try TEST.expectEqual(2, time_spent3.ticket);
+        try TEST.expectEqual(0, time_spent3.time.estimate);
+        try TEST.expectEqual(600, time_spent3.time.spent);
+
+        const time_spent4 = tickets.ticket_time_spent.get(4);
+        try TEST.expectEqual(person1, time_spent4.person);
+        try TEST.expectEqual(3, time_spent4.ticket);
+        try TEST.expectEqual(0, time_spent4.time.estimate);
+        try TEST.expectEqual(120, time_spent4.time.spent);
     }
 }
 test Replay {}
