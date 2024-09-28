@@ -496,6 +496,14 @@ div.ticket-table {
         white-space: nowrap;
         box-sizing: border-box;
 
+        &.drag-me {
+          user-select: none;
+        }
+
+        &.created {
+          text-wrap: nowrap;
+        }
+
         &.title {
           white-space: unset;
 

@@ -84,6 +84,7 @@ document.addEventListener("alpine:init", () => {
             },
             order: [
                 ['priority', 1],
+                ['order', 1], // Temporary as fuck
                 ['status', 1],
                 ['type', 1],
             ],
@@ -160,6 +161,10 @@ document.addEventListener("alpine:init", () => {
                         created_on: new Date(created_on[i]),
                         last_updated_by: last_updated_by[i],
                         last_updated_on: new Date(last_updated_on[i]),
+                        /* NOTE(bozho2):
+                            Experiment!
+                        */
+                        order: i,
                     }
                 }
 
@@ -242,7 +247,6 @@ document.addEventListener("alpine:init", () => {
             const check_type = types.length > 0 && types.length < this.names.type.length;
             const check_status = statuses.length > 0 && statuses.length < this.names.status.length;
 
-
             let entries = Object.entries(this.tickets);
             // First 100
             // entries = entries.slice(0, 5000);
@@ -272,6 +276,58 @@ document.addEventListener("alpine:init", () => {
             // const result = Object.fromEntries(entries);
             return entries.map(([k, t]) => [parseInt(k), t]);
         },
+        ui_should_enable_reorder() {
+           return this.m_table.order[0][0] === 'priority';
+        },
+        /**
+         * Called with the ticket key that has been manually reordered ("sorted")
+         * (a.k.a. on drop event)
+         * 
+         * Position is a relative index in the current ui_filter_tickets() table.
+         * Gets called **before** the modification of the sorting order.
+         */
+        ui_on_reorder_item_to(key, new_position) {
+            const tickets = this.tickets;
+            const ticket = tickets[key];
+            const priority = ticket.priority
+            const sorted_tickets = this.ui_filter_tickets();
+            const old_position = sorted_tickets.findIndex(x => x[0] == key);
+
+            console.log(`${key} moved from ${old_position} to ${new_position}`);
+
+            // Figure out the the location of the new 
+            if (new_position == 0) {
+                // Top dog
+            } else if (new_position == sorted_tickets.length - 1) {
+                // Dropped at the end of the current view.
+            } else {
+                const above = sorted_tickets[(old_position > new_position ? new_position - 1 : new_position)][1];
+                const below = sorted_tickets[(old_position > new_position ? new_position : new_position + 1)][1];
+                console.log(
+                    `above=${above.key}[${above.order}], me=${key}, below=${below.key}[${below.order}]`
+                )
+                if (above.priority == below.priority) {
+                    /* Update the priority as well */
+                    if (ticket.priority !== above.priority) {
+                        ticket.priority = above.priority;
+                    }
+
+                    ticket.order = (above.order + below.order) * 0.5;
+                } else {
+                    /* If at least on of our neighbours matches our priority,
+                        we just position ourselves below them.
+                    */
+                    if (above.priority === ticket.priority) {
+                        ticket.order = above.order + 1;
+                    } else if (below.priority === ticket.priority) {
+                        ticket.order = above.order - 1;
+                    } else {
+                        /* Well, neither of our neighbours is the same priority
+                        as us... Don't  */
+                    }
+                }
+            }
+        },
         create_ticket(title, description, maybe_parent) {
             let ticket = {
                 title: title,
@@ -286,7 +342,9 @@ document.addEventListener("alpine:init", () => {
             ticket.key = this.likely_next_ticket_number();
             this.tickets[ticket.key] = ticket;
 
-            fetch("/api/tickets", { method: "POST", body: JSON.stringify(data) }).then(async r => {
+            fetch("/api/tickets", {
+                method: "POST", body: JSON.stringify(data)
+            }).then(async r => {
                 const txt_response = await r.text();
                 if (r.ok) {
                     const real_key = parseInt(txt_response);
