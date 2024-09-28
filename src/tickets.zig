@@ -212,20 +212,14 @@ pub const TicketStore = struct {
         try self.tickets.resize(self.alloc, n_tickets);
         var allslice = self.tickets.slice();
 
-        // key: Key,
-        // type: Type = 0,
-        // priority: Priority = 0,
-        // status: Status = 0,
-        const keys = allslice.items(.key);
-        const types = allslice.items(.type);
-        const priorities = allslice.items(.priority);
-        const statuses = allslice.items(.status);
-
-        for (0..n_tickets) |i| keys[i] = try reader.readInt(u32, .little);
-
-        for (0..n_tickets) |i| types[i] = try reader.readInt(i8, .little);
-        for (0..n_tickets) |i| priorities[i] = try reader.readInt(i8, .little);
-        for (0..n_tickets) |i| statuses[i] = try reader.readInt(i8, .little);
+        for (allslice.items(.key)) |*i| i.* = try reader.readInt(u32, .little);
+        for (allslice.items(.type)) |*i| i.* = try reader.readInt(i8, .little);
+        for (allslice.items(.priority)) |*i| i.* = try reader.readInt(i8, .little);
+        for (allslice.items(.status)) |*i| i.* = try reader.readInt(i8, .little);
+        for (allslice.items(.creator)) |*i| i.* = try reader.readInt(u32, .little);
+        for (allslice.items(.created_on)) |*i| i.* = try reader.readInt(i64, .little);
+        for (allslice.items(.last_updated_by)) |*i| i.* = try reader.readInt(u32, .little);
+        for (allslice.items(.last_updated_on)) |*i| i.* = try reader.readInt(i64, .little);
 
         // title: SString,
         // description: SString,
@@ -347,6 +341,10 @@ pub const TicketStore = struct {
         for (allslice.items(.type)) |e| try writer.writeInt(i8, e, .little);
         for (allslice.items(.priority)) |e| try writer.writeInt(i8, e, .little);
         for (allslice.items(.status)) |e| try writer.writeInt(i8, e, .little);
+        for (allslice.items(.creator)) |e| try writer.writeInt(u32, e, .little);
+        for (allslice.items(.created_on)) |e| try writer.writeInt(i64, e, .little);
+        for (allslice.items(.last_updated_by)) |e| try writer.writeInt(u32, e, .little);
+        for (allslice.items(.last_updated_on)) |e| try writer.writeInt(i64, e, .little);
 
         //--title
         //--description

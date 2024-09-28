@@ -303,6 +303,7 @@ test "Gofast.persistance" {
     defer std.fs.cwd().deleteFile(filepath) catch unreachable;
 
     // Create the persistance file with some known data.
+    var ticket_create_date = [3]i64{ 0, 0, 0 };
     {
         var gofast = try Gofast.init(alloc, filepath);
         defer gofast.deinit();
@@ -354,6 +355,10 @@ test "Gofast.persistance" {
             .description = "Test description 3",
             .creator = person1,
         });
+
+        ticket_create_date[0] = gofast.tickets.tickets.items(.created_on)[0];
+        ticket_create_date[1] = gofast.tickets.tickets.items(.created_on)[1];
+        ticket_create_date[2] = gofast.tickets.tickets.items(.created_on)[2];
 
         try gofast.giveEstimate(ticket1, person1, 300);
         try gofast.giveEstimate(ticket1, person2, 350);
@@ -423,6 +428,22 @@ test "Gofast.persistance" {
         try TEST.expectEqual(3, time_spent4.ticket);
         try TEST.expectEqual(0, time_spent4.time.estimate);
         try TEST.expectEqual(120, time_spent4.time.spent);
+
+        try TEST.expectEqual(ticket_create_date[0], gofast.tickets.tickets.items(.created_on)[0]);
+        try TEST.expectEqual(ticket_create_date[1], gofast.tickets.tickets.items(.created_on)[1]);
+        try TEST.expectEqual(ticket_create_date[2], gofast.tickets.tickets.items(.created_on)[2]);
+
+        try TEST.expectEqual(ticket_create_date[0], gofast.tickets.tickets.items(.last_updated_on)[0]);
+        try TEST.expectEqual(ticket_create_date[1], gofast.tickets.tickets.items(.last_updated_on)[1]);
+        try TEST.expectEqual(ticket_create_date[2], gofast.tickets.tickets.items(.last_updated_on)[2]);
+
+        try TEST.expectEqual(person1, gofast.tickets.tickets.items(.creator)[0]);
+        try TEST.expectEqual(person2, gofast.tickets.tickets.items(.creator)[1]);
+        try TEST.expectEqual(person1, gofast.tickets.tickets.items(.creator)[2]);
+
+        try TEST.expectEqual(person1, gofast.tickets.tickets.items(.last_updated_by)[0]);
+        try TEST.expectEqual(person2, gofast.tickets.tickets.items(.last_updated_by)[1]);
+        try TEST.expectEqual(person1, gofast.tickets.tickets.items(.last_updated_by)[2]);
     }
 }
 test Replay {}
