@@ -469,11 +469,22 @@ fn apiPatchTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !v
             gofast.lock.lock();
             defer gofast.lock.unlock();
 
-            try gofast.updateTicket(key, .{
+            // TODO: Authentication :). For now just use a placeholder "person"
+            const updater: Ticket.Person = 0;
+
+            try gofast.updateTicket(key, updater, .{
                 .type = if (json.get("type")) |v| @intCast(v.integer) else null,
                 .priority = if (json.get("priority")) |v| @intCast(v.integer) else null,
                 .status = if (json.get("status")) |v| @intCast(v.integer) else null,
+                .order = if (json.get("order")) |v| switch (v) {
+                    .float => |f| @floatCast(f),
+                    .integer => |i| @floatFromInt(i),
+                    else => {
+                        return error.InvalidValue;
+                    },
+                } else null,
             });
+            try gofast.save();
         }
         res.status = 200;
     }

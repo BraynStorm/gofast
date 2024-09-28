@@ -285,9 +285,6 @@ document.addEventListener("alpine:init", () => {
             // const result = Object.fromEntries(entries);
             return entries.map(([k, t]) => [parseInt(k), t]);
         },
-        ui_should_enable_reorder() {
-            return this.m_table.order[0][0] === 'priority';
-        },
         /**
          * Called with the ticket key that has been manually reordered ("sorted")
          * (a.k.a. on drop event)
@@ -296,6 +293,7 @@ document.addEventListener("alpine:init", () => {
          * Gets called **before** the modification of the sorting order.
          */
         ui_on_reorder_item_to(ticket, new_position) {
+            let update = true;
             const sorted_tickets = this.ui_filter_tickets();
             const key = ticket.key;
             const old_position = sorted_tickets.findIndex(x => x[0] == key);
@@ -347,13 +345,36 @@ document.addEventListener("alpine:init", () => {
                         const name_old = np[ticket.priority];
                         const name_above = np[above.priority];
                         const name_below = np[below.priority];
-                        confirm(`You dropped this ticket (${name_old}) between (${name_below}) and (${name_above}).`)
+                        alert(`You dropped this ticket (${name_old}) between (${name_below}) and (${name_above}).`)
                         /* TODO: Find a way to choose which priority to assign.
                             Or somehow ask 
                         */
+                        update = false;
                     }
                 }
             }
+
+            if (update) {
+                this.send_update_order(key);
+            }
+        },
+        send_update_order(key) {
+            console.log(`send_update_order(${key})`);
+            const t = this.tickets[key];
+            fetch(`/api/ticket/${key}`, {
+                method: 'PATCH',
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    priority: t.priority,
+                    order: t.order,
+                })
+            }).then(r => {
+                if (!r.ok) {
+                    console.log(`send_update_order(${key}) failed: ${r.status} - ${r.statusText}`);
+                }
+            });
         },
         create_ticket(title, description, maybe_parent) {
             let ticket = {

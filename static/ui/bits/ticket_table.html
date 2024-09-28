@@ -72,10 +72,10 @@
     <template
       x-for="[key, t] of ui_filter_tickets()"
       :key="`${key} ${t.priority} ${t.order}`">
-      <!-- @click="edit_ticket(t.key)" -->
       <tr :id="display_key(t.key)"
         x-sort:item="t"
         class="ticket"
+        @click="edit_ticket(t.key)"
         :class="t.key == m_table.highlight_key ? 'highlight': ''">
         <td class="handle"><span x-sort:handle>≡</span></td>
         <!-- <td x-text="t.order"></td> -->
