@@ -24,7 +24,7 @@ pub fn build(b: *std.Build) void {
 
     const wasm = b.addExecutable(.{
         .name = "gofast",
-        .root_source_file = b.path("src/wasi.zig"),
+        .root_source_file = b.path("src/wasm.zig"),
         .target = targetWasm,
         .optimize = optimize,
     });

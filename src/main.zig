@@ -89,7 +89,7 @@ pub fn main() !void {
 
     //TODO: Use @embedFile to have them as "DEFAULTS" but still allow HDD edits, fswatch and reload.
     simpleStaticFile(router, "/", "static/ui/index.html");
-    simpleStaticFile(router, "/wasi", "zig-out/bin/gofast.wasm");
+    simpleStaticFile(router, "/wasm", "zig-out/bin/gofast.wasm");
 
     simpleStaticFiles(router, "/static/*", "static");
 

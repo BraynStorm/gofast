@@ -50,14 +50,15 @@ function fmt_time(t) {
 function array_remove(array, item) {
     return array.splice(array.indexOf(item), 1);
 }
-WebAssembly.instantiateStreaming(
-    fetch("/wasi")
-).then(gofast_wasm => {
-    const gofast = gofast_wasm.instance.exports;
-    console.log(gofast);
-    const add = gofast.add;
-    console.log(add(1, 2));
-});
+
+// WebAssembly.instantiateStreaming(
+//     fetch("/wasm")
+// ).then(gofast_wasm => {
+//     const gofast = gofast_wasm.instance.exports;
+//     console.log(gofast);
+//     const add = gofast.add;
+//     console.log(add(1, 2));
+// });
 
 document.addEventListener("alpine:init", () => {
     Alpine.data("GOFAST", () => ({

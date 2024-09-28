@@ -1,3 +1,2 @@
-//TODO:
-// Provide a WebAssembly module for he frontend that will handle the WebSockets
-// and similar things.
+const std = @import("std");
+const Gofast = @import("gofast.zig").Gofast;
