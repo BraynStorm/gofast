@@ -522,6 +522,7 @@ fn apiPatchTicketWork(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response
         const t_ended = if (json.get("timestamp_ended")) |s| s.integer else 0;
 
         try gofast.logWork(key, person, t_started, t_ended);
+        try gofast.save();
         res.status = 200;
     } else {
         res.status = 400;
