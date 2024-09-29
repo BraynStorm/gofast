@@ -79,13 +79,12 @@ document.addEventListener("alpine:init", () => {
         m_table: {
             search: {
                 string: '',
+                type: [],
                 priority: [],
                 status: [],
-                type: [],
             },
             order: [
                 ['priority', 1],
-                ['order', 1], // Temporary as fuck
                 ['status', 1],
                 ['type', 1],
             ],
@@ -274,6 +273,17 @@ document.addEventListener("alpine:init", () => {
                         r += v;
                         if (v != 0) {
                             break;
+                        }
+                        /*PERF:
+                            This is probably horrible...
+                        */
+                        if (s === 'priority') {
+                            /* Special, we need to sort by 'order' as a secondary step. */
+                            const v = a['order'] * o - b['order'] * o;
+                            r += v;
+                            if (v != 0) {
+                                break;
+                            }
                         }
                     }
                     return r;
