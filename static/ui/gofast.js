@@ -230,6 +230,14 @@ document.addEventListener("alpine:init", () => {
                 this.m_nt.status,
                 this.m_nt.priority,
             )
+
+            /*TODO:
+                Handle the case where the server responses with a failure and 
+                we probably want to restore the sate of the box and show it to the
+                user, explaining what happened.
+            */
+            this.m_nt.title = '';
+            this.m_nt.description - '';
         },
         ui_hover_ticket(event, key) {
             if (this.m_tooltip.key !== key) this.m_tooltip.key = key;
