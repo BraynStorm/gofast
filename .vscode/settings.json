@@ -16,7 +16,8 @@
         "gofast-*.7z": true,
     },
     "cSpell.words": [
-        "GOFAST"
+        "GOFAST",
+        "powerline"
     ],
     "triggerTaskOnSave.delay": 400,
     "triggerTaskOnSave.restart": true,

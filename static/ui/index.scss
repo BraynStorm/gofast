@@ -592,6 +592,43 @@ div.tooltip {
   }
 }
 
+div.powerline {
+  display: flex;
+  height: 20px;
+  width: 100%;
+  justify-content: space-between;
+  align-items: stretch;
+  background-color: $c5;
+  color: $c1;
+
+  &>img.logo {
+    margin: 1px .3em 2px .3em;
+
+    &:last-child {
+      transform: scaleX(-100%);
+    }
+  }
+
+  &>nav {
+    a {
+      color: $c1;
+    }
+
+    &>ol {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+
+      &>li {
+        display: inline;
+      }
+    }
+
+  }
+
+}
+
+
 div.modal {
   position: absolute;
   top: 0;
