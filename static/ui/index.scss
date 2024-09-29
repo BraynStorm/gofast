@@ -183,26 +183,43 @@ aside {
     border-bottom-right-radius: $rounding;
     border-right: $border;
 
-    &.edit div.controls {
-      justify-content: stretch;
+    &.edit {
+      div.controls {
+        justify-content: stretch;
 
-      // Whole-issue controls
-      &>button {
-        margin: 0 0 0 0.2em;
-        flex: 1;
+        // Whole-issue controls
+        &>button {
+          margin: 0 0 0 0.2em;
+          flex: 1;
 
-        &:first-child {
-          margin: 0;
+          &:first-child {
+            margin: 0;
+          }
+        }
+
+        &.up>button:last-child {
+          border-top-right-radius: $rounding;
+          margin-bottom: 0.5em;
+        }
+
+        &.down>button:last-child {
+          border-bottom-right-radius: $rounding;
         }
       }
 
-      &.up>button:last-child {
-        border-top-right-radius: $rounding;
-        margin-bottom: 0.5em;
-      }
+      &>div>div.icon-selectors {
+        display: flex;
+        flex-direction: column;
+        border-radius: $round;
+        overflow: hidden;
+        border: 1px solid #888;
+        background-color: #888;
+        gap:1px;
 
-      &.down>button:last-child {
-        border-bottom-right-radius: $rounding;
+        &>div.icon-grid {
+          border-radius: 0;
+          border:0;
+        }
       }
     }
   }
@@ -628,6 +645,30 @@ div.powerline {
 
 }
 
+input[type=text].title {
+  border-radius: 8px;
+  border: 1px solid $c6;
+  padding: 0.5em 0.5em;
+  font-size: 1.3em;
+  font-family: 'FQ';
+
+  font-weight: bold;
+  text-align: center;
+  outline: none;
+  box-sizing: border-box;
+
+  &.as-heading {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: 0;
+  }
+
+  &::placeholder {
+    font-weight: normal;
+    font-style: italic;
+    font-size: 0.67em;
+  }
+}
 
 div.modal {
   position: absolute;
@@ -651,31 +692,6 @@ div.modal {
     flex-direction: column;
     flex: 0.4;
     $lineNumberWidth: 30px;
-
-    &>input[type=text].title {
-      border-radius: 8px;
-      border: 1px solid $c6;
-      padding: 0.5em 0.5em;
-      font-size: 1.3em;
-      font-family: 'FQ';
-
-      font-weight: bold;
-      text-align: center;
-      outline: none;
-      box-sizing: border-box;
-
-      &.as-heading {
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-        border-bottom: 0;
-      }
-
-      &::placeholder {
-        font-weight: normal;
-        font-style: italic;
-        font-size: 0.67em;
-      }
-    }
 
     &>div.description {
       &.md-editor {

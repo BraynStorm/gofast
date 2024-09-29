@@ -7,29 +7,35 @@
   x-transition:leave-start="leavestart"
   x-data="{ e_desc: false }">
   <div class="controls up">
-    <button @click="stop_edit_ticket(false)" class="btn-cross text">Cancel</button>
-    <button @click="stop_edit_ticket(true)" class="btn-checkmark text">Save</button>
+    <button @click="stop_edit_ticket(false)"
+      class="btn-cross text">Cancel</button>
+    <button @click="stop_edit_ticket(true)"
+      class="btn-checkmark text">Save</button>
   </div>
   <span>Edit:</span>
   <span x-text="display_key(m_et.key)" class="et_key"></span>
-  <input class="et_title" name="et_title" x-model="m_et.title" />
+  <input type="text" class="title" name="et_title" x-model="m_et.title" />
   <div>
-    <select class="et_priority" x-model="m_et.priority">
-      <template x-for="(priority, id) in names.priority" :key="id">
-        <option :selected="m_et.priority === id" :value="id" x-text="priority">
-        </option>
+    <!-- Selectors for Type, Priority and Status -->
+    <div class="icon-selectors">
+      <template x-data="{
+          props: [
+            ['type',     id => '<img src=' + double_quotes(type_icon(id))     + ' title=' + double_quotes(type_name(id)) + '>'],
+            ['priority', id => '<img src=' + double_quotes(priority_icon(id)) + ' title=' + double_quotes(priority_name(id)) + '>'],
+            ['status',   id => '<span>'    + status_name(id)   + '</span>'],
+          ]
+        }"
+        x-for="([prop, fn]) in props"
+        :key="prop">
+        <div class="icon-grid">
+          <template x-for="_, id in names[prop]" :key="id">
+            <div :class="m_et[prop] === id ? 'selected' : ''"
+              @click="m_et[prop] = id" x-html="fn(id)">
+            </div>
+          </template>
+        </div>
       </template>
-    </select>
-    <select class="et_type" x-model="m_et.type">
-      <template x-for="(type, id) in names.type" :key="id">
-        <option :value="id" x-text="type"></option>
-      </template>
-    </select>
-    <select class="et_status" x-model="m_et.status">
-      <template x-for="(status, id) in names.status" :key="id">
-        <option :value="id" x-text="status"></option>
-      </template>
-    </select>
+    </div>
     <!-- IF-guard this, so that it doesn't take forever to load the main table. -->
     <template x-if="left_panel.mode === 'edit'">
       <select class="et_parent" x-model="m_et.parent">
