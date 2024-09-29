@@ -86,7 +86,7 @@ $round: 8px;
   font-family: 'FQ Italic';
   font-style: normal;
   font-weight: normal;
-  src: local('Friz Quadrata Std Italic'), url('/static/ui/friz-quadrata-std-italic-587033b2c95df.woff') format('woff');
+  src: local('Friz Quadrata Std Italic'), url('/static/ui/fonts/friz-quadrata-std-italic.woff') format('woff');
 }
 
 
@@ -94,7 +94,7 @@ $round: 8px;
   font-family: 'FQ';
   font-style: normal;
   font-weight: normal;
-  src: local('Friz Quadrata Std Medium'), url('/static/ui/friz-quadrata-std-medium-5870338ec7ef8.woff') format('woff');
+  src: local('Friz Quadrata Std Medium'), url('/static/ui/fonts/friz-quadrata-std-medium.woff') format('woff');
 }
 
 
@@ -102,14 +102,14 @@ $round: 8px;
   font-family: 'FQ Bold';
   font-style: normal;
   font-weight: normal;
-  src: local('Friz Quadrata Std Bold'), url('/static/ui/friz-quadrata-std-bold-587034a220f9f.woff') format('woff');
+  src: local('Friz Quadrata Std Bold'), url('/static/ui/fonts/friz-quadrata-std-bold.woff') format('woff');
 }
 
 @font-face {
   font-family: 'FQ Bold Italic';
   font-style: normal;
   font-weight: normal;
-  src: local('Friz Quadrata Std Bold Italic'), url('/static/ui/friz-quadrata-std-bold-italic-587033d6d4298.woff') format('woff');
+  src: local('Friz Quadrata Std Bold Italic'), url('/static/ui/fonts/friz-quadrata-std-bold-italic.woff') format('woff');
 }
 
 body,
