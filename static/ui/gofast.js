@@ -14,6 +14,8 @@ function display_key(key, max_key) {
     return '#' + `${key}`.padStart(padding, '0');
 }
 
+const DEBUG = console.log;
+
 
 function fmt_time_exact(t) {
     const seconds = Number(t);

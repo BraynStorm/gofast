@@ -4,13 +4,19 @@
   x-data="{
     e_desc: true,
     cm: undefined,
+    init_cm(element) {
+      this.cm = CodeMirror.fromTextArea(element, {
+        value: m_nt.description,
+        keymap: 'default',
+        lineNumbers: true,
+        lineWrapping: true,
+        mode: 'markdown',
+      });
+    }
   }">
   <div class="modal" @keyup.escape.window="m_nt.show = false">
     <div class="new-ticket">
-
-      <h1>New ticket...</h1>
-      <h4>I can't imagine...</h4>
-
+      <h1 style="margin-top:0; margin-bottom: 0.3em"><center>New ticket</center></h1>
       <!-- Selectors fro Type, Priority -->
       <div class="icon-selectors">
         <template x-data="{
@@ -34,18 +40,8 @@
         :class="`title ${e_desc ? 'as-heading' : ''}`"
         x-model="m_nt.title">
 
-      <div x-show="e_desc" class="description md-editor">
-        <div x-init="
-          cm = CodeMirror.fromTextArea($el.parentNode.querySelector('textarea'), {
-            value: m_nt.description,
-            keymap: 'default',
-            lineNumbers: true,
-            lineWrapping: true,
-            mode: 'markdown',
-          });
-        ">
-        </div>
-        <textarea
+      <div x-show="e_desc" class="description md-editor" >
+        <textarea x-init="DEBUG('open'); init_cm($el)"
           placeholder="... and by that I mean this really convoluted idea:
 1. 
 2.
@@ -65,7 +61,6 @@
           x-show="e_desc"
           @click="
             m_nt.description = cm.getValue();
-            cm = undefined;
             e_desc = false;
           ">
           Preview Markdown
