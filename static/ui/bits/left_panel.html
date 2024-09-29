@@ -7,8 +7,8 @@
   x-transition:leave-start="leavestart"
   x-data="{ e_desc: false }">
   <div class="controls up">
-    <button @click="stop_edit_ticket" class="btn-cross text">Cancel</button>
-    <button @click="stop_edit_ticket" class="btn-checkmark text">Save</button>
+    <button @click="stop_edit_ticket(false)" class="btn-cross text">Cancel</button>
+    <button @click="stop_edit_ticket(true)" class="btn-checkmark text">Save</button>
   </div>
   <span>Edit:</span>
   <span x-text="display_key(m_et.key)" class="et_key"></span>

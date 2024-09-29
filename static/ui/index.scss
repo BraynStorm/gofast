@@ -78,8 +78,6 @@ $cLink: rgb(0, 102, 204); // [FAKE]
 $cDarken: rgba(0, 0, 0, 0.1); // [FAKE]
 $cGrayBorder: #888;
 
-$insetRound: 10px;
-$insetHeight: 2.5em;
 $scrollPastEnd : 5em;
 $round: 8px;
 
@@ -124,67 +122,6 @@ body {
   font-family: 'FQ', 'Roboto', Arial, sans-serif;
   background: $c1;
   overflow: hidden;
-}
-
-/*******************************************************************************
- ***  Inset  ***
- *******************************************************************************/
-.inset {
-  height: $insetHeight;
-  padding: 4px 4px 4px 4px;
-
-  border-bottom-left-radius: $insetRound;
-  border-bottom-right-radius: $insetRound;
-  box-sizing: border-box;
-
-  background-color: $c1;
-  box-shadow: 0 0 3px 1px $c3;
-
-  display: flex;
-  justify-content: stretch;
-  align-items: stretch;
-
-  width: 94%;
-
-  position: sticky;
-  top: 0;
-  left: 5%;
-
-  span {
-    align-self: center;
-    margin: 0 1em 0 1em;
-  }
-
-  input {
-    $border: 1px solid black;
-
-    display: block;
-    flex: 1;
-    border: $border;
-    border-right: 0;
-
-    &.nt_key {
-      flex: 0;
-      border-top-left-radius: $insetRound;
-      border-bottom-left-radius: $insetRound;
-      background: white;
-    }
-
-    &:first-child {
-      border-top-left-radius: $insetRound;
-      border-bottom-left-radius: $insetRound;
-    }
-
-    &:nth-last-child(2) {
-      border-top-right-radius: $insetRound;
-      border-bottom-right-radius: $insetRound;
-      border-right: $border;
-    }
-  }
-
-  button {
-    margin-left: 1em;
-  }
 }
 
 /*******************************************************************************
@@ -639,7 +576,8 @@ div.tooltip {
   flex-direction: column;
   max-width: 40%;
   padding: 1em;
-  border-radius: $insetRound;
+  $round: 8px;
+  border-radius: $round;
 
   position: absolute;
   top: 0;

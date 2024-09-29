@@ -426,9 +426,9 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
                 .title = title,
                 .description = description,
                 .parent = maybe_parent,
-                .priority = @intCast(priority_i64),
                 .type_ = @intCast(type_),
                 .status = @intCast(status),
+                .priority = @intCast(priority_i64),
                 // TODO: Add authentication
                 .creator = 0,
             });
@@ -469,16 +469,37 @@ fn apiPatchTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !v
             gofast.lock.lock();
             defer gofast.lock.unlock();
 
-            // TODO: Authentication :). For now just use a placeholder "person"
+            //TODO: Authentication :). For now just use a placeholder "person"
             const updater: Ticket.Person = 0;
 
             try gofast.updateTicket(key, updater, .{
-                .type = if (json.get("type")) |v| @intCast(v.integer) else null,
-                .priority = if (json.get("priority")) |v| @intCast(v.integer) else null,
-                .status = if (json.get("status")) |v| @intCast(v.integer) else null,
+                .title = if (json.get("title")) |v| switch (v) {
+                    .string => |str| str,
+                    else => return error.InvalidValue,
+                } else null,
+                .description = if (json.get("description")) |v| switch (v) {
+                    .string => |str| str,
+                    else => return error.InvalidValue,
+                } else null,
+                .parent = if (json.get("parent")) |v| switch (v) {
+                    .integer => |int| @as(Ticket.Key, @intCast(int)),
+                    else => return error.InvalidValue,
+                } else null,
+                .type = if (json.get("type")) |v| switch (v) {
+                    .integer => |int| @intCast(int),
+                    else => return error.InvalidValue,
+                } else null,
+                .priority = if (json.get("priority")) |v| switch (v) {
+                    .integer => |int| @intCast(int),
+                    else => return error.InvalidValue,
+                } else null,
+                .status = if (json.get("status")) |v| switch (v) {
+                    .integer => |int| @intCast(int),
+                    else => return error.InvalidValue,
+                } else null,
                 .order = if (json.get("order")) |v| switch (v) {
-                    .float => |f| @floatCast(f),
-                    .integer => |i| @floatFromInt(i),
+                    .float => |float| @floatCast(float),
+                    .integer => |int| @floatFromInt(int),
                     else => {
                         return error.InvalidValue;
                     },

@@ -89,8 +89,8 @@ pub const Gofast = struct {
         title: []const u8,
         description: []const u8,
         parent: ?Ticket.Key = null,
-        priority: Ticket.Priority = 0,
         type_: Ticket.Type = 0,
+        priority: Ticket.Priority = 0,
         status: Ticket.Status = 0,
         creator: Ticket.Person,
     }) !Ticket.Key {
@@ -122,46 +122,80 @@ pub const Gofast = struct {
     /// Change some data about a ticket.
     ///
     /// The ticket must exist.
-    pub fn updateTicket(self: *Self, key: Ticket.Key, u: struct {
-        title: ?[]const u8 = null,
-        description: ?[]const u8 = null,
-        parent: ??Ticket.Key = null,
-        status: ?Ticket.Status = null,
-        priority: ?Ticket.Priority = null,
-        order: ?Ticket.Order = null,
-        type: ?Ticket.Type = null,
-    }) !void {
+    pub fn updateTicket(
+        self: *Self,
+        key: Ticket.Key,
+        updater: Ticket.Person,
+        u: struct {
+            title: ?[]const u8 = null,
+            description: ?[]const u8 = null,
+            parent: ??Ticket.Key = null,
+            type: ?Ticket.Type = null,
+            status: ?Ticket.Status = null,
+            priority: ?Ticket.Priority = null,
+            order: ?Ticket.Order = null,
+        },
+    ) !void {
         const alloc = self.tickets.alloc;
 
         var slice = self.tickets.tickets.slice();
 
         // Find the ticket's index in the MAL.
-        const index = std.mem.indexOfScalar(Ticket.Key, slice.items(.key), key) orelse return error.NotFound;
+        //PERF:
+        //  We can take advantage of the fact that the whole ticket_store
+        //  is ordered by key and that keys are sequential and non-repeating.
+        //  Thus, starting at the index `ticket_key-1`, we guarantee that we're
+        //  as close to the actual ticket as possible.
+        const index = std.mem.indexOfScalar(
+            Ticket.Key,
+            slice.items(.key)[0..key],
+            key,
+        ) orelse return error.NotFound;
 
         //TODO:
         //  Record the changes in some history structure.
 
-        if (u.type) |p| slice.items(.details)[index].type = p;
-        if (u.status) |p| slice.items(.details)[index].status = p;
-        if (u.priority) |p| slice.items(.details)[index].priority = p;
-        if (u.order) |p| slice.items(.details)[index].order = p;
+        log.debug("updateTicket: #{}.last_updated_by = {}", .{ key, updater });
+        if (u.type) |p| {
+            slice.items(.details)[index].type = p;
+            log.debug("updateTicket: #{}.type = {}", .{ key, p });
+        }
+        if (u.status) |p| {
+            slice.items(.details)[index].status = p;
+            log.debug("updateTicket: #{}.status = {}", .{ key, p });
+        }
+        if (u.priority) |p| {
+            slice.items(.details)[index].priority = p;
+            log.debug("updateTicket: #{}.priority = {}", .{ key, p });
+        }
+        if (u.order) |p| {
+            slice.items(.details)[index].order = p;
+            log.debug("updateTicket: #{}.order = {}", .{ key, p });
+        }
         if (u.parent) |p| {
             //PERF:
             // Can optimize this by reusing the index we already found in the code above.
             try self.tickets.setParent(key, p);
+            log.debug("updateTicket: #{}.parent = {?}", .{ key, p });
         }
         if (u.title) |p| {
             const titles = slice.items(.title);
             var old = titles[index];
             old.deinit(alloc);
             titles[index] = try SString.fromSlice(alloc, p);
+            log.debug("updateTicket: #{}.title = {s}", .{ key, p[0..@min(p.len, 16)] });
         }
         if (u.description) |p| {
             const descriptions = slice.items(.description);
             var old = descriptions[index];
             old.deinit(alloc);
             descriptions[index] = try SString.fromSlice(alloc, p);
+            log.debug("updateTicket: #{}.description = {s}", .{ key, p[0..@min(p.len, 16)] });
         }
+
+        // PERF: Maybe put these together?
+        slice.items(.last_updated_by)[index] = updater;
+        slice.items(.last_updated_on)[index] = timestamp();
     }
 
     /// Set this ticket's estimate from the given person.
@@ -447,5 +481,35 @@ test "Gofast.persistance" {
         try TEST.expectEqual(person2, gofast.tickets.tickets.items(.last_updated_by)[1]);
         try TEST.expectEqual(person1, gofast.tickets.tickets.items(.last_updated_by)[2]);
     }
+}
+test "Gofast.update.order" {
+    const TEST = std.testing;
+    const alloc = TEST.allocator;
+    var gofast = try Gofast.init(alloc, null);
+    defer gofast.deinit();
+
+    // People
+    const person1 = try gofast.createPerson(.{ .name = "Bozhidar" });
+    const person2 = try gofast.createPerson(.{ .name = "Stoyanov" });
+
+    const ticket1 = try gofast.createTicket(.{
+        .title = "Test ticket 1",
+        .description = "Test description 1",
+        .creator = person1,
+    });
+    const index: usize = @intCast(ticket1 - 1);
+
+    try TEST.expectEqual(person1, gofast.tickets.tickets.items(.last_updated_by)[index]);
+    try TEST.expectEqual(@as(f32, @floatFromInt(ticket1)), gofast.tickets.tickets.items(.details)[index].order);
+
+    try gofast.updateTicket(
+        ticket1,
+        person2,
+        .{
+            .order = 200,
+        },
+    );
+    try TEST.expectEqual(person2, gofast.tickets.tickets.items(.last_updated_by)[index]);
+    try TEST.expectEqual(200, gofast.tickets.tickets.items(.details)[index].order);
 }
 test Replay {}

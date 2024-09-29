@@ -98,8 +98,8 @@ document.addEventListener("alpine:init", () => {
             description: "",
             maybe_parent: null,
             type: 0,
-            priority: 0,
             status: 0,
+            priority: 0,
         },
         // Model: Edit Ticket.
         m_et: {
@@ -107,8 +107,8 @@ document.addEventListener("alpine:init", () => {
             description: "",
             parent: null,
             type: 0,
-            priority: 0,
             status: 0,
+            priority: 0,
         },
         // Model: Tooltip
         m_tooltip: {
@@ -116,11 +116,6 @@ document.addEventListener("alpine:init", () => {
             position: [0, 0],
         },
 
-        inset: {
-            // Kinda external to the rest of the fields. 
-            mode: 'create',
-            create: {},
-        },
         left_panel: { mode: '' },
         right_panel: { mode: '' },
         reload() {
@@ -230,6 +225,9 @@ document.addEventListener("alpine:init", () => {
                 this.m_nt.title,
                 this.m_nt.description,
                 this.m_nt.maybe_parent,
+                this.m_nt.type,
+                this.m_nt.status,
+                this.m_nt.priority,
             )
         },
         ui_hover_ticket(event, key) {
@@ -376,18 +374,32 @@ document.addEventListener("alpine:init", () => {
                 }
             });
         },
-        create_ticket(title, description, maybe_parent) {
+        create_ticket(
+            title,
+            description,
+            maybe_parent,
+            type,
+            status,
+            priority,
+        ) {
             let ticket = {
                 title: title,
                 description: description,
                 parent: maybe_parent,
-                priority: 0, // TODO: Add dropdown for priority.
-                type: 0, // TODO: Add dropdown for types.
+                type: type,
+                status: status,
+                priority: priority,
             };
             const data = { ...ticket };
 
             // Assign a 'fake' ticket number - our best guess.
             ticket.key = this.likely_next_ticket_number();
+            ticket.order = ticket.key;
+            ticket.created_on = new Date();
+            ticket.last_updated_on = ticket.created_on;
+            ticket.created_by = 0; // TODO: Authentication.
+            ticket.last_updated_by = 0;
+
             this.tickets[ticket.key] = ticket;
 
             fetch("/api/tickets", {
@@ -403,10 +415,13 @@ document.addEventListener("alpine:init", () => {
 
                         delete this.tickets[old_key];
                         ticket.key = real_key;
+                        ticket.order = real_key;
                         this.tickets[ticket.key] = ticket;
                     }
                     this.max_key = real_key;
                     console.log("create_ticket: success");
+                    this.m_nt.show = false;
+                    // TODO: Also maybe clear it?
                 } else {
                     console.log(`create_ticket: error: ${r.status}, ${txt_response}`);
                 }
@@ -451,15 +466,63 @@ document.addEventListener("alpine:init", () => {
             });
         },
         edit_ticket(key) {
-            this.inset.mode = 'edit';
             this.left_panel.mode = 'edit';
-            this.m_et = { ... this.tickets[key], key: key };
+            this.m_et = { ... this.tickets[key] };
             this.m_table.highlight_key = key;
         },
-        stop_edit_ticket() {
-            if (this.inset.mode === 'edit') this.inset.mode = '';
+        stop_edit_ticket(save) {
             if (this.left_panel.mode === 'edit') this.left_panel.mode = '';
             this.m_table.highlight_key = 0;
+
+            if (save) {
+                /*TODO:
+                    1. Save the data locally, keeping a shadow-copy in case of failure.
+                    2. Save the data on the server.
+                */
+
+                const edited = this.m_et;
+                const key = edited.key;
+                const old = this.tickets[key];
+                const data = {};
+
+
+                const noop = x => x;
+                const fields = [
+                    ['title', noop],
+                    ['description', noop],
+                    ['parent', parseInt],
+                    ['type', parseInt],
+                    ['status', parseInt],
+                    ['priority', parseInt],
+                ]
+
+                const shadow_copy = {}
+
+                for (const [field, transform] of fields) {
+                    const edited_value = transform(edited[field]);
+                    if (edited_value !== old[field]) {
+                        data[field] = edited_value;
+                        shadow_copy[field] = old[field];
+                        old[field] = edited_value;
+                    }
+                }
+
+                fetch(`/api/ticket/${key}`, {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(data)
+                }).then(r => {
+                    if (!r.ok) {
+                        console.log(`stop_edit_ticket: error: ${r.status} - ${r.statusText}`);
+                        // restore the old data.
+                        for (const field of fields) {
+                            old[field] = shadow_copy[field];
+                        }
+                    }
+                })
+            }
         },
         /** `1` becomes `#001` */
         display_key(key) {
