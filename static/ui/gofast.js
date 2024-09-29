@@ -116,6 +116,7 @@ document.addEventListener("alpine:init", () => {
             key: 0,
             position: [0, 0],
         },
+        m_help: false,
 
         left_panel: { mode: '' },
         right_panel: { mode: '' },
