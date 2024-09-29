@@ -483,9 +483,18 @@ document.addEventListener("alpine:init", () => {
             });
         },
         edit_ticket(key) {
-            this.left_panel.mode = 'edit';
-            this.m_et = { ... this.tickets[key] };
             this.m_table.highlight_key = key;
+            this.left_panel.mode = 'edit';
+
+            /*NOTE:
+                If I don' use $nextTick, the parent dropdown always begins
+                as "No parent" the first time the panel is opened.
+
+                No idea why.
+            */
+            this.$nextTick(() => {
+                this.m_et = { ... this.tickets[key] };
+            })
         },
         stop_edit_ticket(save) {
             if (this.left_panel.mode === 'edit') this.left_panel.mode = '';
