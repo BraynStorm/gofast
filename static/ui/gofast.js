@@ -322,7 +322,7 @@ document.addEventListener("alpine:init", () => {
                 console.log(
                     `above=${above.key}[${above.order}], me=${key}, below=${below.key}[${below.order}]`
                 )
-                if (above.priority == below.priority) {
+                if (above.priority === below.priority) {
                     /* Update the priority as well */
                     if (ticket.priority !== above.priority) {
                         ticket.priority = above.priority;
@@ -335,7 +335,7 @@ document.addEventListener("alpine:init", () => {
                     if (above.priority === ticket.priority) {
                         ticket.order = above.order + 1;
                     } else if (below.priority === ticket.priority) {
-                        ticket.order = above.order - 1;
+                        ticket.order = below.order - 1;
                     } else {
                         /* Well, neither of our neighbours is the same priority
                         as us... Don't  */
@@ -343,11 +343,16 @@ document.addEventListener("alpine:init", () => {
                         const name_old = np[ticket.priority];
                         const name_above = np[above.priority];
                         const name_below = np[below.priority];
-                        alert(`You dropped this ticket (${name_old}) between (${name_below}) and (${name_above}).`)
-                        /* TODO: Find a way to choose which priority to assign.
-                            Or somehow ask 
+                        alert(`You dropped this '${name_old}' ticket between '${name_below}' and '${name_above}'.`)
+                        /* TODO: Find a way to choose which priority to assign. Or somehow ask.
+
                         */
+                        const order = ticket.order;
+                        ticket.order = order + 1;
                         update = false;
+                        this.$nextTick(() => {
+                            ticket.order = order;
+                        });
                     }
                 }
             }
