@@ -583,6 +583,9 @@ document.addEventListener("alpine:init", () => {
         type_name(type_id) {
             return this.names.type[type_id];
         },
+        double_quotes(s) {
+            return '"' + s + '"'
+        },
         progress(key) {
             const estimate = this.ticket_time.estimate[key];
             const spent = this.ticket_time.spent[key];

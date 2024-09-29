@@ -12,8 +12,8 @@
       <div class="icon-selectors">
         <template x-data="{
         props: [
-          ['type',     id => '<img src=' + type_icon(id)     + '>'],
-          ['priority', id => '<img src=' + priority_icon(id) + '>'],
+          ['type',     id => '<img src=' + double_quotes(type_icon(id))     + ' title=' + double_quotes(type_name(id)) + '>'],
+          ['priority', id => '<img src=' + double_quotes(priority_icon(id)) + ' title=' + double_quotes(priority_name(id)) + '>'],
           ['status',   id => '<span>'    + status_name(id)   + '</span>'],
         ]
       }" x-for="([prop, fn]) in props" :key="prop">
