@@ -285,7 +285,6 @@ div.icon-grid {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  margin: 0 0.7em;
   border: 1px solid #888;
   border-radius: $round;
   overflow: hidden;
@@ -383,7 +382,6 @@ div.icon-selectors>div.sorting {
     flex: 1;
     border: 0;
     border-radius: 0;
-    margin: 0;
   }
 }
 
@@ -638,13 +636,14 @@ div.modal {
       &::placeholder {
         font-weight: normal;
         font-style: italic;
-        font-size: 0.8em;
+        font-size: 0.67em;
       }
     }
 
     &>div.description {
       &.md-editor {
         &>textarea {
+          font-family: 'FQ';
           border: 1px solid $c6;
           border-radius: $round;
           border-top-left-radius: 0;
@@ -674,10 +673,11 @@ div.modal {
     &>div.icon-selectors {
       display: flex;
       justify-content: space-evenly;
+      margin-top: 0.3em;
+      margin-bottom: 0.5em;
+      gap: 5px;
 
       &>div.icon-grid {
-        margin-top: 0.3em;
-        margin-bottom: 0.5em;
 
         &:nth-child(2) {
           margin-left: 0;
