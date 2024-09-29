@@ -511,12 +511,11 @@ document.addEventListener("alpine:init", () => {
                 const old = this.tickets[key];
                 const data = {};
 
-
                 const noop = x => x;
                 const fields = [
                     ['title', noop],
                     ['description', noop],
-                    ['parent', parseInt],
+                    ['parent', x => x == null ? null : parseInt(x)],
                     ['type', parseInt],
                     ['status', parseInt],
                     ['priority', parseInt],
