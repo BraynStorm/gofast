@@ -64,14 +64,7 @@ pub fn main() !void {
     var gofast: Gofast = undefined;
     gofast = try Gofast.init(ALLOC, "persist.gfs");
     try init_gofast(&gofast);
-    //TODO():
-    //  Load these from a persistence file at some point.
-
-    var server = try httpz.Server(*Gofast).init(ALLOC, .{
-        .port = 20000,
-        // .thread_pool = .{ .count = 4 },
-        // .workers = .{ .count = 4 },
-    }, &gofast);
+    var server = try httpz.Server(*Gofast).init(ALLOC, .{ .port = 20000 }, &gofast);
     defer {
         server.stop();
         server.deinit();
