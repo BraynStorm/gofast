@@ -238,6 +238,7 @@ div.md-editor {
     resize: none;
     word-wrap: normal;
     height: fit-content;
+    min-height: 14em;
     padding: 0.5em;
     border-radius: 8px;
     border: 1px solid $c6;
@@ -629,12 +630,6 @@ div.modal {
       box-sizing: border-box;
 
       &.as-heading {
-        /*NOTE:
-          For some reason, this ends up 2 pixels smaller, so I added this hot-glue here.
-          Please don't wait for it to __dry out__ before finding a real solution.
-        */
-        margin-left: $lineNumberWidth + 2;
-
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
         border-bottom: 0;
@@ -644,6 +639,19 @@ div.modal {
         font-weight: normal;
         font-style: italic;
         font-size: 0.8em;
+      }
+    }
+
+    &>div.description {
+      &.md-editor {
+        &>textarea {
+          border: 1px solid $c6;
+          border-radius: $round;
+          border-top-left-radius: 0;
+          border-top-right-radius: 0;
+          outline: none;
+          margin-top: 0;
+        }
       }
     }
 
