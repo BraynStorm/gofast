@@ -30,15 +30,15 @@
      inkscape:deskcolor="#505050"
      inkscape:document-units="px"
      showgrid="true"
-     inkscape:zoom="5.6568542"
-     inkscape:cx="57.452427"
-     inkscape:cy="380.86539"
+     inkscape:zoom="0.70710678"
+     inkscape:cx="589.72706"
+     inkscape:cy="468.10469"
      inkscape:window-width="1920"
-     inkscape:window-height="1009"
-     inkscape:window-x="1912"
-     inkscape:window-y="-8"
+     inkscape:window-height="1020"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g8"
+     inkscape:current-layer="layer3"
      inkscape:export-bgcolor="#ffffff00">
     <inkscape:grid
        id="grid1"
@@ -931,7 +931,7 @@
      inkscape:label="priority_3">
     <path
        id="path3-40-3"
-       style="fill:#87ba0e;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#92ca0f;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
        d="M 0.18713908,154.27593 2.4611901,152.00351 16.10384,165.64054 29.746489,152.0035 32.020543,154.27593 16.10384,170.18705 Z M 28.211563,166.40129 M 0.18713908,161.93041 2.4611901,159.65799 16.10384,173.29502 29.746489,159.65799 32.020543,161.93041 16.10384,177.84153 Z M 28.211563,174.05577 M 0.18713908,169.5849 2.4611901,167.31248 16.10384,180.94951 29.746489,167.31247 32.020543,169.5849 16.10384,185.49601 Z M 28.211563,181.71025"
        inkscape:label="priority_3"
        class="icon" />
@@ -942,7 +942,7 @@
      inkscape:label="priority_2">
     <path
        id="path3-4-6-5"
-       style="fill:#87ba0e;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#dcf451;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
        d="m 0.18713908,124.27594 2.27405102,-2.27243 13.6426499,13.63703 13.642649,-13.63703 2.274054,2.27242 -15.916703,15.91113 z M 28.211563,136.40129 M 0.18713908,131.93042 2.4611901,129.658 16.10384,143.29503 29.746489,129.658 32.020543,131.93042 16.10384,147.84154 Z M 28.211563,144.05578"
        inkscape:label="priority_2"
        class="icon" />
@@ -954,7 +954,7 @@
      style="display:inline">
     <path
        id="path3-9-4"
-       style="fill:#87ba0e;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#f8df52;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
        d="M 0.18713908,101.93042 2.4611901,99.657997 16.10384,113.29503 29.746489,99.657997 32.020543,101.93042 16.10384,117.84154 Z M 28.211563,114.05578"
        sodipodi:nodetypes="ccccccc"
        inkscape:export-filename="arrow-head.svg"
@@ -982,7 +982,7 @@
      style="display:inline">
     <path
        id="path3-9"
-       style="fill:#d11a1a;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#ed8b43;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
        d="M 0.18713908,83.752649 2.4611901,86.025072 16.10384,72.388044 29.746489,86.025075 32.020541,83.752652 16.10384,67.841535 Z M 28.211563,71.627295"
        sodipodi:nodetypes="ccccccc"
        inkscape:export-filename="arrow-head.svg"
@@ -998,7 +998,7 @@
      style="display:inline">
     <path
        id="path3-4-6"
-       style="fill:#d11a1a;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#e1613f;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
        d="M 0.18713908,61.407136 2.4611901,63.679559 16.10384,50.042527 29.746489,63.679562 32.020541,61.407139 16.10384,45.496015 Z M 28.211563,49.281779 M 0.18713908,53.75265 2.4611901,56.025073 16.10384,42.388044 29.746489,56.025076 32.020541,53.752653 16.10384,37.841536 Z M 28.211563,41.627295"
        inkscape:label="priority_-2"
        class="icon" />

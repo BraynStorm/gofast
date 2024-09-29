@@ -2,21 +2,31 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="32.207684mm"
-   height="26.212122mm"
-   viewBox="0 0 32.207684 26.212122"
+   width="121.91917"
+   height="99.258698"
+   viewBox="0 0 32.257781 26.262197"
    version="1.1"
    id="svg1"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <style
+     id="style1">.icon { stroke-width:0.3px; }
+</style>
   <defs
-     id="defs1" />
+     id="defs1">
+    <color-profile
+       name="sRGB-IEC61966-2.1"
+       xlink:href="../../../../../../Windows/system32/spool/drivers/color/sRGB%20Color%20Space%20Profile.icm"
+       id="color-profile2" />
+  </defs>
   <g
      id="layer3"
-     transform="translate(-18.896161,-128.97493)">
+     transform="translate(0.02504963,-121.79144)">
     <path
        id="path3-4-6-5"
-       style="fill:#87ba0e;fill-opacity:1;stroke:#000000;stroke-width:0.264584;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
-       d="m 19.0833,131.4344 2.274051,-2.27243 13.64265,13.63703 13.642649,-13.63703 2.274054,2.27242 -15.916703,15.91113 z m 28.024424,12.12535 m -28.024424,-4.47087 2.274051,-2.27242 13.64265,13.63703 13.642649,-13.63703 2.274054,2.27242 L 35.000001,155 Z m 28.024424,12.12536" />
+       style="fill:#dcf451;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="m 0.18713908,124.27594 2.27405102,-2.27243 13.6426499,13.63703 13.642649,-13.63703 2.274054,2.27242 -15.916703,15.91113 z M 28.211563,136.40129 M 0.18713908,131.93042 2.4611901,129.658 16.10384,143.29503 29.746489,129.658 32.020543,131.93042 16.10384,147.84154 Z M 28.211563,144.05578"
+       class="icon" />
   </g>
 </svg>

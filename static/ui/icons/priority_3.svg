@@ -2,21 +2,31 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="32.207684mm"
-   height="33.866604mm"
-   viewBox="0 0 32.207684 33.866604"
+   width="121.91917"
+   height="128.18901"
+   viewBox="0 0 32.257781 33.916676"
    version="1.1"
    id="svg1"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <style
+     id="style1">.icon { stroke-width:0.3px; }
+</style>
   <defs
-     id="defs1" />
+     id="defs1">
+    <color-profile
+       name="sRGB-IEC61966-2.1"
+       xlink:href="../../../../../../Windows/system32/spool/drivers/color/sRGB%20Color%20Space%20Profile.icm"
+       id="color-profile2" />
+  </defs>
   <g
      id="layer2"
-     transform="translate(-18.896161,-158.97492)">
+     transform="translate(0.02504967,-151.79143)">
     <path
        id="path3-40-3"
-       style="fill:#87ba0e;fill-opacity:1;stroke:#000000;stroke-width:0.264584;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
-       d="m 19.0833,161.43439 2.274051,-2.27242 13.64265,13.63703 13.642649,-13.63704 2.274054,2.27243 -15.916703,15.91112 z m 28.024424,12.12536 m -28.024424,-4.47088 2.274051,-2.27242 13.64265,13.63703 13.642649,-13.63703 2.274054,2.27242 -15.916703,15.91112 z m 28.024424,12.12536 m -28.024424,-4.47087 2.274051,-2.27242 13.64265,13.63703 13.642649,-13.63704 2.274054,2.27243 -15.916703,15.91111 z m 28.024424,12.12535" />
+       style="fill:#92ca0f;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="M 0.18713908,154.27593 2.4611901,152.00351 16.10384,165.64054 29.746489,152.0035 32.020543,154.27593 16.10384,170.18705 Z M 28.211563,166.40129 M 0.18713908,161.93041 2.4611901,159.65799 16.10384,173.29502 29.746489,159.65799 32.020543,161.93041 16.10384,177.84153 Z M 28.211563,174.05577 M 0.18713908,169.5849 2.4611901,167.31248 16.10384,180.94951 29.746489,167.31247 32.020543,169.5849 16.10384,185.49601 Z M 28.211563,181.71025"
+       class="icon" />
   </g>
 </svg>

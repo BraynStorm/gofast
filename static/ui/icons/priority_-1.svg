@@ -2,22 +2,32 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="32.20768mm"
-   height="18.557632mm"
-   viewBox="0 0 32.20768 18.557632"
+   width="121.91917"
+   height="70.328346"
+   viewBox="0 0 32.257779 18.607708"
    version="1.1"
    id="svg1"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <style
+     id="style1">.icon { stroke-width:0.3px; }
+</style>
   <defs
-     id="defs1" />
+     id="defs1">
+    <color-profile
+       name="sRGB-IEC61966-2.1"
+       xlink:href="../../../../../../Windows/system32/spool/drivers/color/sRGB%20Color%20Space%20Profile.icm"
+       id="color-profile2" />
+  </defs>
   <g
      id="layer8"
      style="display:inline"
-     transform="translate(-18.896161,-74.812942)">
+     transform="translate(0.02504958,-67.62944)">
     <path
        id="path3-9"
-       style="fill:#d11a1a;fill-opacity:1;stroke:#000000;stroke-width:0.264584;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
-       d="M 19.0833,90.911112 21.357351,93.183535 35.000001,79.546507 48.64265,93.183538 50.916702,90.911115 35.000001,74.999998 Z M 47.107724,78.785758" />
+       style="fill:#ed8b43;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="M 0.18713908,83.752649 2.4611901,86.025072 16.10384,72.388044 29.746489,86.025075 32.020541,83.752652 16.10384,67.841535 Z M 28.211563,71.627295"
+       class="icon" />
   </g>
 </svg>
