@@ -229,29 +229,10 @@ pub const Gofast = struct {
         return std.time.milliTimestamp();
     }
 
-    /// Create a new ticket, withthe provided parameters
-    pub fn createTicket(self: *Self, c: struct {
-        title: []const u8,
-        description: []const u8,
-        parent: ?Ticket.Key = null,
-        type_: Ticket.Type = 0,
-        priority: Ticket.Priority = 0,
-        status: Ticket.Status = 0,
-        creator: Person,
-    }) !Ticket.Key {
-        return try self.actionCreateTicket(c.creator, .{
-            .title = c.title,
-            .description = c.description,
-            .parent = c.parent,
-            .priority = c.priority,
-            .type_ = c.type_,
-            .status = c.status,
-        });
-    }
-
-    pub fn actionCreateTicket(
+    /// Create a new ticket
+    pub fn createTicket(
         self: *Self,
-        user: Person,
+        craetor: Person,
         action: History.Event.Action.CreateTicket,
     ) !Ticket.Key {
         const now = timestamp();
@@ -264,16 +245,16 @@ pub const Gofast = struct {
             .priority = action.priority,
             .type_ = action.type_,
             .status = action.status,
-            .creator = user,
+            .creator = craetor,
             .created_on = now,
-            .last_updated_by = user,
+            .last_updated_by = craetor,
             .last_updated_on = now,
         });
 
         try self.history.addEvent(self.alloc, .{
             .timestamp = now,
             .ticket = ticket,
-            .user = user,
+            .user = craetor,
             .action = .{ .create_ticket = action },
         });
 
@@ -286,7 +267,7 @@ pub const Gofast = struct {
     ///     Remove this function, as we'd like to keep an
     ///     "infinite" history of tickets.
     pub fn deleteTicket(self: *Self, key: Ticket.Key) !void {
-        try self.removeOne(key);
+        try self.removeTicket(key);
     }
 
     /// Change some data about a ticket.
@@ -316,7 +297,7 @@ pub const Gofast = struct {
         //  is ordered by key and that keys are sequential and non-repeating.
         //  Thus, starting at the index `ticket_key-1`, we guarantee that we're
         //  as close to the actual ticket as possible.
-        const index = try self.findIndex(key);
+        const index = try self.findTicketIndex(key);
 
         //TODO:
         //  Record the changes in some history structure.
@@ -548,7 +529,7 @@ pub const Gofast = struct {
                     for (self.graph_children.items(.from), self.graph_children.items(.to)) |from, to| {
                         for (0..Ticket.FatLink.To.capacity) |i| {
                             if (to.items[i] == 0) break;
-                            const parent_key = try self.findIndex(to.items[i]);
+                            const parent_key = try self.findTicketIndex(to.items[i]);
                             parents[parent_key] = from;
                         }
                     }
@@ -686,10 +667,7 @@ pub const Gofast = struct {
     /// Add a new ticket.
     ///
     /// It's key will be auto-assigned.
-    /// TODO:
-    ///     Just take a Ticket-like struct instead of this parameter mess,
-    ///     It's not even type-safe!
-    pub fn addTicket(
+    fn addTicket(
         self: *Self,
         c: struct {
             title: SString,
@@ -732,12 +710,12 @@ pub const Gofast = struct {
     }
 
     pub fn findParent(self: *const Self, key: Ticket.Key) Error!?Ticket.Key {
-        const index = try self.findIndex(key);
+        const index = try self.findTicketIndex(key);
         return self.tickets.items(.parent)[index];
     }
 
-    pub fn removeOne(self: *Self, key: Ticket.Key) Error!void {
-        const index = try self.findIndex(key);
+    pub fn removeTicket(self: *Self, key: Ticket.Key) Error!void {
+        const index = try self.findTicketIndex(key);
         const parent = self.tickets.items(.parent)[index];
 
         if (parent) |par| {
@@ -756,7 +734,7 @@ pub const Gofast = struct {
     }
 
     pub fn clearParent(self: *Self, ticket: Ticket.Key) Error!void {
-        const index = try self.findIndex(ticket);
+        const index = try self.findTicketIndex(ticket);
         return self.clearParent(ticket, index);
     }
 
@@ -844,7 +822,7 @@ pub const Gofast = struct {
         return self.setParent(to, from);
     }
     pub fn setParent(self: *Self, ticket: Ticket.Key, new_parent: ?Ticket.Key) !void {
-        const index = try self.findIndex(ticket);
+        const index = try self.findTicketIndex(ticket);
 
         const parent_ptr = &self.tickets.items(.parent)[index];
         const old_parent: ?u32 = parent_ptr.*;
@@ -900,7 +878,7 @@ pub const Gofast = struct {
         }
     }
 
-    pub fn findIndex(self: *const Self, key: Ticket.Key) Error!MalIndex {
+    pub fn findTicketIndex(self: *const Self, key: Ticket.Key) Error!MalIndex {
         const max_index = @min(key, self.tickets.len);
         return std.mem.indexOfScalar(
             Ticket.Key,
@@ -910,7 +888,7 @@ pub const Gofast = struct {
     }
 
     /// Collect all children from a given ticket to any other ticket.
-    pub fn childrenAlloc(
+    pub fn ticketChildrenAlloc(
         self: *const Self,
         from: Ticket.Key,
         alloc: Allocator,
@@ -1096,7 +1074,7 @@ test Gofast {
 
     try TEST.expect(gf.max_ticket_key == 0);
 
-    const ticket1 = try gf.createTicket(.{ .title = "t", .description = "d", .creator = 0 });
+    const ticket1 = try gf.createTicket(0, .{ .title = "t", .description = "d" });
     try TEST.expectEqual(1, ticket1);
     try TEST.expectEqual(1, gf.tickets.len);
     try TEST.expectEqual(1, gf.tickets.items(.key)[0]);
@@ -1157,22 +1135,19 @@ test "Gofast.persistance" {
         const person1 = try gofast.createPerson(.{ .name = "Bozhidar" });
         const person2 = try gofast.createPerson(.{ .name = "Stoyanov" });
 
-        const ticket1 = try gofast.createTicket(.{
+        const ticket1 = try gofast.createTicket(person1, .{
             .title = "Test ticket 1",
             .description = "Test description 1",
-            .creator = person1,
         });
 
-        const ticket2 = try gofast.createTicket(.{
+        const ticket2 = try gofast.createTicket(person2, .{
             .title = "Test ticket 2",
             .description = "Test description 2",
-            .creator = person2,
         });
 
-        const ticket3 = try gofast.createTicket(.{
+        const ticket3 = try gofast.createTicket(person1, .{
             .title = "Test ticket 3",
             .description = "Test description 3",
-            .creator = person1,
             .parent = ticket1,
         });
 
@@ -1296,10 +1271,9 @@ test "Gofast.update.order" {
     const person1 = try gofast.createPerson(.{ .name = "Bozhidar" });
     const person2 = try gofast.createPerson(.{ .name = "Stoyanov" });
 
-    const ticket1 = try gofast.createTicket(.{
+    const ticket1 = try gofast.createTicket(person1, .{
         .title = "Test ticket 1",
         .description = "Test description 1",
-        .creator = person1,
     });
     const index: usize = @intCast(ticket1 - 1);
 
@@ -1328,65 +1302,47 @@ test "Gofast.ticketstore" {
     var store = try Gofast.init(alloc, null);
     defer store.deinit();
 
-    const k1 = try store.addTicket(.{
-        .title = try SString.fromSlice(alloc, "T1"),
-        .description = try SString.fromSlice(alloc, "D1"),
+    const person1 = try store.createPerson(.{ .name = "p0" });
+
+    const k1 = try store.createTicket(person1, .{
+        .title = "T1",
+        .description = "D1",
         .parent = null,
         .status = 0,
         .type_ = 0,
         .priority = 0,
-        .creator = 0,
-        .created_on = 0,
-        .last_updated_on = 0,
-        .last_updated_by = 0,
     });
-    const k2 = try store.addTicket(.{
-        .title = try SString.fromSlice(alloc, "T2"),
-        .description = try SString.fromSlice(alloc, "D2"),
+    const k2 = try store.createTicket(person1, .{
+        .title = "T2",
+        .description = "D2",
         .parent = null,
         .status = 0,
         .type_ = 0,
         .priority = 0,
-        .creator = 0,
-        .created_on = 0,
-        .last_updated_on = 0,
-        .last_updated_by = 0,
     });
-    const k3 = try store.addTicket(.{
-        .title = try SString.fromSlice(alloc, "T3"),
-        .description = try SString.fromSlice(alloc, "D3"),
+    const k3 = try store.createTicket(person1, .{
+        .title = "T3",
+        .description = "D3",
         .parent = null,
         .status = 0,
         .type_ = 0,
         .priority = 0,
-        .creator = 0,
-        .created_on = 0,
-        .last_updated_on = 0,
-        .last_updated_by = 0,
     });
-    const k4 = try store.addTicket(.{
-        .title = try SString.fromSlice(alloc, "T4"),
-        .description = try SString.fromSlice(alloc, "D4"),
+    const k4 = try store.createTicket(person1, .{
+        .title = "T4",
+        .description = "D4",
         .parent = null,
         .status = 0,
         .type_ = 0,
         .priority = 0,
-        .creator = 0,
-        .created_on = 0,
-        .last_updated_on = 0,
-        .last_updated_by = 0,
     });
-    const k5 = try store.addTicket(.{
-        .title = try SString.fromSlice(alloc, "T5"),
-        .description = try SString.fromSlice(alloc, "D5"),
+    const k5 = try store.createTicket(person1, .{
+        .title = "T5",
+        .description = "D5",
         .parent = null,
         .status = 0,
         .type_ = 0,
         .priority = 0,
-        .creator = 0,
-        .created_on = 0,
-        .last_updated_on = 0,
-        .last_updated_by = 0,
     });
     try TEST.expect(k1 == 1);
     try TEST.expect(k2 == 2);
@@ -1395,21 +1351,17 @@ test "Gofast.ticketstore" {
     try TEST.expect(k5 == 5);
 
     // Setting a parent directly.
-    const k6 = try store.addTicket(.{
-        .title = try SString.fromSlice(alloc, "T6"),
-        .description = try SString.fromSlice(alloc, "D6"),
+    const k6 = try store.createTicket(person1, .{
+        .title = "T6",
+        .description = "D6",
         .parent = k1,
         .status = 0,
         .type_ = 0,
         .priority = 0,
-        .creator = 0,
-        .created_on = 0,
-        .last_updated_on = 0,
-        .last_updated_by = 0,
     });
     try TEST.expect(k6 != 0);
     {
-        const k1children = try store.childrenAlloc(k1, alloc, 1);
+        const k1children = try store.ticketChildrenAlloc(k1, alloc, 1);
         defer alloc.free(k1children);
 
         try TEST.expectEqual(1, k1children.len);
@@ -1418,8 +1370,8 @@ test "Gofast.ticketstore" {
 
     // Removing some child
     {
-        try store.removeOne(k6);
-        const k1children = try store.childrenAlloc(k1, alloc, 1);
+        try store.removeTicket(k6);
+        const k1children = try store.ticketChildrenAlloc(k1, alloc, 1);
         // defer alloc.free(k1children);
         try TEST.expectEqual(0, k1children.len);
     }
@@ -1428,21 +1380,17 @@ test "Gofast.ticketstore" {
     try store.connectFromTo(k1, k2);
 
     // Add another child and remove the parent
-    const k7 = try store.addTicket(.{
-        .title = try SString.fromSlice(alloc, "T7"),
-        .description = try SString.fromSlice(alloc, "D7"),
+    const k7 = try store.createTicket(person1, .{
+        .title = "T7",
+        .description = "D7",
         .parent = k1,
         .status = 0,
         .type_ = 0,
         .priority = 0,
-        .creator = 0,
-        .created_on = 0,
-        .last_updated_on = 0,
-        .last_updated_by = 0,
     });
     try TEST.expect(k7 != 0);
     {
-        const k1children = try store.childrenAlloc(k1, alloc, 1);
+        const k1children = try store.ticketChildrenAlloc(k1, alloc, 1);
         defer alloc.free(k1children);
 
         printChildrenGraph(&store, alloc);
@@ -1451,7 +1399,7 @@ test "Gofast.ticketstore" {
         try TEST.expectEqual(k2, k1children[0]);
         try TEST.expectEqual(k7, k1children[1]);
     }
-    try store.removeOne(k1);
+    try store.removeTicket(k1);
     try TEST.expectEqual(null, store.findParent(k2));
     try TEST.expectEqual(null, store.findParent(k7));
 
@@ -1470,7 +1418,7 @@ pub fn printChildrenGraph(ticket_store: *const Gofast, alloc: Allocator) void {
 
     for (ticket_store.tickets.items(.key)) |key_parent| {
         std.debug.print("{} -> ", .{key_parent});
-        const children = ticket_store.childrenAlloc(key_parent, alloc, null) catch unreachable;
+        const children = ticket_store.ticketChildrenAlloc(key_parent, alloc, null) catch unreachable;
         defer alloc.free(children);
 
         for (children) |c| {

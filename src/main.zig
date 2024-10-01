@@ -450,16 +450,18 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
         const new_key = blk: {
             gofast.lock.lock();
             defer gofast.lock.unlock();
-            break :blk try gofast.createTicket(.{
-                .title = title,
-                .description = description,
-                .parent = maybe_parent,
-                .type_ = @intCast(type_),
-                .status = @intCast(status),
-                .priority = @intCast(priority_i64),
+            break :blk try gofast.createTicket(
                 // TODO: Add authentication
-                .creator = 0,
-            });
+                0,
+                .{
+                    .title = title,
+                    .description = description,
+                    .parent = maybe_parent,
+                    .type_ = @intCast(type_),
+                    .status = @intCast(status),
+                    .priority = @intCast(priority_i64),
+                },
+            );
         };
 
         res.status = 200;

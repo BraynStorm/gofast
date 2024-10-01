@@ -131,7 +131,7 @@ fn isChildRecursive(
     //  but this is much easier to implement right now, as I don't have a good
     //  way of accessing JUST the children, and have to manually walk the
     //  MultiArrayList... Later I will fix this.
-    const children = gofast.childrenAlloc(me, alloc, 4) catch unreachable;
+    const children = gofast.ticketChildrenAlloc(me, alloc, 4) catch unreachable;
     defer alloc.free(children);
 
     // Do I even HAVE children?
@@ -182,8 +182,10 @@ pub fn initGiberish(
         const max_status: Gofast.Ticket.Status = @intCast(gofast.name_statuses.items.len - 1);
         const max_person: Gofast.Person = @intCast(gofast.name_people.items.len - 1);
 
-        const rand_title = try title_gen.generateWords(random, alloc);
-        const rand_desc = try description_gen.generateWords(random, alloc);
+        var rand_title = try title_gen.generateWords(random, alloc);
+        defer rand_title.deinit(alloc);
+        var rand_description = try description_gen.generateWords(random, alloc);
+        defer rand_description.deinit(alloc);
 
         const rand_type = std.rand.intRangeAtMost(random, Gofast.Ticket.Type, 0, max_type);
         const rand_priority = std.rand.intRangeAtMost(random, Gofast.Ticket.Priority, 0, max_priority);
@@ -192,19 +194,20 @@ pub fn initGiberish(
 
         const rand_create = std.rand.intRangeAtMost(random, i64, now_start, now_end);
         const rand_update = std.rand.intRangeAtMost(random, i64, rand_create, now_end);
+        const rand_updater = std.rand.intRangeAtMost(random, Gofast.Person, 0, max_person);
 
-        _ = gofast.addTicket(.{
-            .title = rand_title,
-            .description = rand_desc,
+        const ticket = gofast.createTicket(rand_creator, .{
+            .title = rand_title.s,
+            .description = rand_description.s,
             .parent = null,
             .type_ = rand_type,
             .priority = rand_priority,
             .status = rand_status,
-            .creator = rand_creator,
-            .created_on = rand_create,
-            .last_updated_by = rand_creator,
-            .last_updated_on = rand_update,
         }) catch unreachable;
+
+        gofast.tickets.items(.created_on)[ticket - 1] = rand_create;
+        gofast.tickets.items(.last_updated_on)[ticket - 1] = rand_update;
+        gofast.tickets.items(.last_updated_by)[ticket - 1] = rand_updater;
     }
 
     // Set random parents.
