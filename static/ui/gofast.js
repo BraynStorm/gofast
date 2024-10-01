@@ -87,7 +87,7 @@ document.addEventListener("alpine:init", () => {
                 string: '',
                 type: [],
                 priority: [],
-                status: [],
+                status: [0, 1],
             },
             order: [
                 ['priority', 1],
@@ -636,6 +636,7 @@ document.addEventListener("alpine:init", () => {
                 .attr("width", width)
                 .attr("height", height)
                 .attr("style", "max-width: 100%; height: auto; font: 10px sans-serif;");
+            container.replaceChildren(svg.node());
 
             // Append cells.
             const cell = svg
@@ -656,26 +657,58 @@ document.addEventListener("alpine:init", () => {
                 .style("cursor", "pointer")
                 .on("click", clicked);
 
+            function wrap(text, width) {
+                text.each(function () {
+                    var text = d3.select(this),
+                        words = text.text().split(/\s+/).reverse(),
+                        word,
+                        line = [],
+                        lineNumber = 0,
+                        lineHeight = 1.1, // ems
+                        x = text.attr("x"),
+                        y = text.attr("y"),
+                        dy = 0, //parseFloat(text.attr("dy")),
+                        tspan = text.text(null)
+                            .append("tspan")
+                            .attr("x", x)
+                            .attr("y", y)
+                            .attr("dy", dy + "em");
+                    while (word = words.pop()) {
+                        line.push(word);
+                        tspan.text(line.join(" "));
+                        DEBUG(tspan.node().getComputedTextLength())
+                        if (tspan.node().getComputedTextLength() > width) {
+                            line.pop();
+                            tspan.text(line.join(" "));
+                            line = [word];
+                            tspan = text.append("tspan")
+                                .attr("x", x)
+                                .attr("y", y)
+                                .attr("dy", ++lineNumber * lineHeight + dy + "em")
+                                .text(word);
+                        }
+                    }
+                });
+            }
+
             const text = cell.append("text")
                 .style("user-select", "none")
                 .attr("pointer-events", "none")
-                .attr("x", 4)
-                .attr("y", 13)
-                .attr("fill-opacity", d => +labelVisible(d));
+                .attr("x", 10)
+                .attr("y", 13 * 3)
+                .attr("fill-opacity", d => +labelVisible(d))
+                .text(d => d.data.ticket.title)
+                .call(wrap, 130);
 
             text.append("tspan")
-                .attr("x", 4)
-                .attr("y", 13)
+                .attr("x", 10)
+                .attr("y", 13 * 1)
                 .text(d => this.display_key(d.data.ticket.key))
-            text.append("tspan")
-                .attr("x", 4)
-                .attr("y", 13 * 2)
-                .text(d => (d.data.ticket.title.substring(0, 20) + '...'))
 
             const format = fmt_time
             const tspan = text.append("tspan")
-                .attr("x", 4)
-                .attr("y", 13 * 3)
+                .attr("x", 10)
+                .attr("y", 13 * 2)
                 .attr("fill-opacity", d => labelVisible(d) * 0.7)
                 .text(d => ` ${format(d.value)}`);
 
@@ -685,6 +718,7 @@ document.addEventListener("alpine:init", () => {
             // On click, change the focus and transitions it into view.
             let focus = root;
             function clicked(event, p) {
+                if (p.parent === null) return;
                 focus = focus === p ? p = p.parent : p;
 
                 root.each(d => d.target = {
@@ -710,7 +744,6 @@ document.addEventListener("alpine:init", () => {
                 return d.y1 <= width && d.y0 >= 0 && d.x1 - d.x0 > 16;
             }
 
-            container.replaceChildren(svg.node());
         },
         stop_edit_ticket(save) {
             if (this.left_panel.mode === 'edit') this.left_panel.mode = '';

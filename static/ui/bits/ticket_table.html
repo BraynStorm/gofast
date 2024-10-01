@@ -54,10 +54,15 @@
   <div>
     <div class="icon-grid">
       <div @click="
-        if(!(m_table.highlight_key > 0))
+        graph.show = !graph.show;
+        if(!(m_table.highlight_key > 0)) {
           alert('Must select a ticket to see its child graph');
-        else 
-          graph.show = !graph.show;
+        } else {
+          $nextTick(() => {
+            if (m_table.highlight_key !== 0)
+              graph_draw_ticket_children(m_table.highlight_key)
+          });
+        }
         "
         :class="graph.show ? 'selected' : ''"><span>Graph</span></div>
     </div>
