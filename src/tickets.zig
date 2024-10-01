@@ -75,7 +75,6 @@ pub const Ticket = struct {
         } = .{},
 
         pub const Seconds = u32; // Can fit ~500years of full workdays
-        pub const Timestamp = i64; // std.time.timestamp()
     };
 };
 

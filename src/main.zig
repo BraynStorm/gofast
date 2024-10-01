@@ -61,14 +61,52 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     ALLOC = gpa.allocator();
 
+    const Config = struct {
+        persist: []const u8,
+        port: u16 = 22000,
+    };
+
+    var config = Config{
+        .persist = try ALLOC.dupe(u8, "persist.gfs"),
+    };
+
+    {
+        const args = try std.process.argsAlloc(ALLOC);
+        defer std.process.argsFree(ALLOC, args);
+
+        const arg_port = "--port=";
+        const arg_persist = "--persist=";
+
+        for (args[1..], 1..) |arg, i| {
+            if (std.mem.startsWith(u8, arg, arg_port)) {
+                config.port = try std.fmt.parseInt(u16, arg[arg_port.len..], 10);
+            } else if (std.mem.startsWith(u8, arg, arg_persist)) {
+                config.persist = try ALLOC.dupe(u8, arg[arg_persist.len..]);
+            } else {
+                std.debug.print(
+                    \\Args:
+                    \\  | Argument   | Default     | Help                               |
+                    \\  |------------|-------------|------------------------------------|
+                    \\  | --port=    | 22000       | Specify the TCP port to listen on. |
+                    \\  | --persist= | persist.gfs | Load/save persistance here         |
+                    \\  |------------|-------------|------------------------------------|
+                    \\
+                    \\error: Unknown argument {} - '{s}'.
+                , .{ i, arg });
+                return;
+            }
+        }
+    }
+
     var gofast: Gofast = undefined;
-    gofast = try Gofast.init(ALLOC, "persist.gfs");
+    gofast = try Gofast.init(ALLOC, config.persist);
     try init_gofast(&gofast);
-    var server = try httpz.Server(*Gofast).init(ALLOC, .{ .port = 20000 }, &gofast);
+    var server = try httpz.Server(*Gofast).init(ALLOC, .{ .port = config.port }, &gofast);
     defer {
         server.stop();
         server.deinit();
     }
+    ALLOC.free(config.persist);
 
     var router = server.router(.{});
 
