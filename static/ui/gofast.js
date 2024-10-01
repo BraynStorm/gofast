@@ -45,7 +45,7 @@ function fmt_time(t) {
     } else if (m > 0) {
         return "~" + Math.floor(m + epsilon) + "m";
     } else {
-        return ""
+        return `${seconds} s`
     }
 }
 
@@ -507,7 +507,7 @@ document.addEventListener("alpine:init", () => {
             this.$nextTick(() => {
                 this.m_et = { ... this.tickets[key] };
             })
-            this.graph_draw_ticket_children(key);
+            this.graph_update();
         },
         direct_children(key) {
             const tickets = this.tickets;
@@ -564,6 +564,11 @@ document.addEventListener("alpine:init", () => {
             }
 
         },
+        graph_update() {
+            const key = this.m_table.highlight_key;
+            if (this.graph.show && key > 0)
+                this.graph_draw_ticket_children(key);
+        },
         graph_draw_ticket_children(ticket) {
             /*
             Provides an object with keys = parent, values = array of children,
@@ -572,6 +577,7 @@ document.addEventListener("alpine:init", () => {
             const subgraph = this.ticket_subgraph(ticket, false);
             const tickets = Alpine.raw(this.tickets);
             const compute_progress = x => this.progress(x);
+            const mode = this.graph.mode;
 
             let progress = {};
             function ticket_progress(key) {
@@ -606,7 +612,6 @@ document.addEventListener("alpine:init", () => {
             if (!data.children) {
                 data.children = [];
             }
-            DEBUG(data)
 
 
             // Specify the chart’s dimensions.
@@ -617,14 +622,25 @@ document.addEventListener("alpine:init", () => {
             // Create the color scale.
             const color = d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, data.children.length + 1));
 
+            let fn_sum = undefined;
+            let value_name = undefined;
+            if (mode == 'time_left') {
+                value_name = 'Work left';
+                fn_sum = d => {
+                    const p = ticket_progress(d.ticket.key);
+                    return Math.max(0, p.estimate - p.spent);
+                };
+            } else if (mode == 'estimated') {
+                value_name = 'Estimated';
+                fn_sum = d => {
+                    const p = ticket_progress(d.ticket.key);
+                    return Math.max(0, p.estimate);
+                };
+            }
+
             // Compute the layout.
             const hierarchy = d3.hierarchy(data)
-                .sum(d => {
-                    // d.progress.spent - d.progress.estimate
-                    const p = ticket_progress(d.ticket.key);
-                    DEBUG(d.ticket.key, p.estimate, p.spent)
-                    return Math.max(0, p.estimate - p.spent);
-                })
+                .sum(fn_sum)
                 .sort((a, b) => b.height - a.height || b.value - a.value);
             const root = d3.partition()
                 .size([height, (hierarchy.height + 1) * width / visible])
@@ -635,7 +651,7 @@ document.addEventListener("alpine:init", () => {
                 .attr("viewBox", [0, 0, width, height])
                 .attr("width", width)
                 .attr("height", height)
-                .attr("style", "max-width: 100%; height: auto; font: 10px sans-serif;");
+                .attr("style", "max-width: 100%; height: auto;");
             container.replaceChildren(svg.node());
 
             // Append cells.
@@ -676,7 +692,6 @@ document.addEventListener("alpine:init", () => {
                     while (word = words.pop()) {
                         line.push(word);
                         tspan.text(line.join(" "));
-                        DEBUG(tspan.node().getComputedTextLength())
                         if (tspan.node().getComputedTextLength() > width) {
                             line.pop();
                             tspan.text(line.join(" "));
@@ -691,26 +706,42 @@ document.addEventListener("alpine:init", () => {
                 });
             }
 
+            const format = fmt_time
+
             const text = cell.append("text")
                 .style("user-select", "none")
                 .attr("pointer-events", "none")
                 .attr("x", 10)
-                .attr("y", 13 * 3)
+                .attr("y", 13 * 5)
                 .attr("fill-opacity", d => +labelVisible(d))
                 .text(d => d.data.ticket.title)
-                .call(wrap, 130);
+                .call(wrap, rect.attr('width') - 10);
 
             text.append("tspan")
                 .attr("x", 10)
                 .attr("y", 13 * 1)
                 .text(d => this.display_key(d.data.ticket.key))
 
-            const format = fmt_time
             const tspan = text.append("tspan")
                 .attr("x", 10)
                 .attr("y", 13 * 2)
                 .attr("fill-opacity", d => labelVisible(d) * 0.7)
-                .text(d => ` ${format(d.value)}`);
+                .text(d => {
+                    if (d.children)
+                        return `${value_name}${d.children ? '(incl. children)' : ''}: ${format(d.value)}`
+                    else
+                        return `${value_name}: ${format(d.value)}`
+                });
+
+            const tspan2 = text.append("tspan")
+                .attr("x", 10)
+                .attr("y", 13 * 3)
+                .attr("fill-opacity", d => labelVisible(d) * 0.7)
+                .text(d => {
+                    const prog = this.progress(d.data.ticket.key);
+                    DEBUG(prog)
+                    return `Standalone: S:${format(prog.spent)} E:${format(prog.estimate)}`;
+                });
 
             cell.append("title")
                 .text(d => `${d.ancestors().map(d => this.display_key(d.data.ticket.key)).reverse().join("/")}\n${format(d.value)}`);
@@ -734,6 +765,7 @@ document.addEventListener("alpine:init", () => {
                 rect.transition(t).attr("height", d => rectHeight(d.target));
                 text.transition(t).attr("fill-opacity", d => +labelVisible(d.target));
                 tspan.transition(t).attr("fill-opacity", d => labelVisible(d.target) * 0.7);
+                tspan2.transition(t).attr("fill-opacity", d => labelVisible(d.target) * 0.7);
             }
 
             function rectHeight(d) {
@@ -741,7 +773,7 @@ document.addEventListener("alpine:init", () => {
             }
 
             function labelVisible(d) {
-                return d.y1 <= width && d.y0 >= 0 && d.x1 - d.x0 > 16;
+                return d.y1 <= width && d.y0 >= 0 && d.x1 - d.x0 > 3 * 13;
             }
 
         },

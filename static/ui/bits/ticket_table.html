@@ -58,18 +58,15 @@
         if(!(m_table.highlight_key > 0)) {
           alert('Must select a ticket to see its child graph');
         } else {
-          $nextTick(() => {
-            if (m_table.highlight_key !== 0)
-              graph_draw_ticket_children(m_table.highlight_key)
-          });
+          $nextTick(() => graph_update());
         }
         "
         :class="graph.show ? 'selected' : ''"><span>Graph</span></div>
     </div>
     <div class="icon-grid">
-      <div @click="graph.mode = 'time_left'"
+      <div @click="graph.mode = 'time_left'; graph_update()"
         :class="graph.mode === 'time_left' ? 'selected' : ''"><span>TL</span></div>
-      <div @click="graph.mode = 'estimated'"
+      <div @click="graph.mode = 'estimated'; graph_update()"
         :class="graph.mode === 'estimated' ? 'selected' : ''"><span>E</span></div>
     </div>
   </div>
@@ -82,24 +79,29 @@
     <template
       x-for="[key, t] of ui_filter_tickets()"
       :key="`${key} ${t.priority} ${t.order}`">
-      <tr :id="display_key(t.key)"
+      <tr :id="display_key(key)"
         x-sort:item="t"
         class="ticket"
-        @click="edit_ticket(t.key)"
-        :class="t.key == m_table.highlight_key ? 'highlight': ''">
+        @click.debounce.100ms="
+          graph.show = true;
+          m_table.highlight_key = key;
+          $nextTick(() => graph_update());
+        "
+        @dblclick="edit_ticket(key)"
+        :class="key == m_table.highlight_key ? 'highlight': ''">
         <td class="handle"><span x-sort:handle>≡</span></td>
         <!-- <td x-text="t.order"></td> -->
         <td>
           <img :src="type_icon(t.type)" :title="type_name(t.type)" />
-          <a class="ticket" :href="display_key(t.key)"
-            x-text="display_key(t.key)"></a>
+          <a class="ticket" :href="display_key(key)"
+            x-text="display_key(key)"></a>
         </td>
         <td class="icon">
           <img :src="priority_icon(t.priority)"
             :title="priority_name(t.priority)" />
         </td>
         <!-- Progress bar -->
-        <td x-data="progress(t.key)">
+        <td x-data="progress(key)">
           <div class="progress-bar"
             x-data="{ p: (estimate > 0 ? spent/estimate : 0), left: estimate - spent}"
             x-text="`${fmt_time(left)} (${parseInt(Math.min(p, 1)*100)}%)`">
@@ -109,7 +111,7 @@
         <td class="created" x-text="t.created_on.toLocaleString()"></td>
         <td class="status" x-text="status_name(t.status)"></td>
         <td class="title"
-          @mousemove="ui_hover_ticket($event, t.key)"
+          @mousemove="ui_hover_ticket($event, key)"
           @mouseleave="ui_hover_ticket($event, 0)"><div
             x-text="t.title"></div></td>
       </tr>
