@@ -477,10 +477,7 @@ pub const TicketStore = struct {
     }
 
     pub fn removeOne(self: *Self, key: Ticket.Key) Error!void {
-        const index = self.findIndex(key) catch {
-            return error.NotFound;
-        };
-
+        const index = try self.findIndex(key);
         const parent = self.tickets.items(.parent)[index];
 
         if (parent) |par| {
@@ -643,18 +640,13 @@ pub const TicketStore = struct {
         }
     }
 
-    /// Find the key of a given ticket index.
-    fn findKey(self: *const Self, index: MalIndex) Ticket.Key {
-        return self.tickets.items(.ticket)[index];
-    }
-
-    fn findIndex(self: *const Self, key: Ticket.Key) Error!MalIndex {
-        for (self.tickets.items(.key), 0..) |k, i| {
-            if (k == key)
-                return i;
-        }
-
-        return error.NotFound;
+    pub fn findIndex(self: *const Self, key: Ticket.Key) Error!MalIndex {
+        const max_index = @min(key, self.tickets.len);
+        return std.mem.indexOfScalar(
+            Ticket.Key,
+            self.tickets.items(.key)[0..max_index],
+            key,
+        ) orelse error.NotFound;
     }
 
     /// Collect all children from a given ticket to any other ticket.

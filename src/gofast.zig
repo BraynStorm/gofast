@@ -18,6 +18,7 @@ pub const Gofast = struct {
 
     /// Store the tickets in the system.
     tickets: TicketStore,
+    history: History,
 
     /// If this is notnull, the data has been loaded from this file,
     /// and all changes are saved in said file.
@@ -30,6 +31,9 @@ pub const Gofast = struct {
     pub fn init(alloc: Allocator, persitence: ?[]const u8) !Gofast {
         var g = Gofast{
             .tickets = try TicketStore.init(alloc),
+            .history = .{
+                .arena_string = std.heap.ArenaAllocator.init(alloc),
+            },
         };
 
         const cwd = std.fs.cwd();
@@ -65,6 +69,7 @@ pub const Gofast = struct {
             };
             p.close();
         }
+        self.history.deinit(self.tickets.alloc);
         self.tickets.deinit();
     }
 
@@ -94,20 +99,45 @@ pub const Gofast = struct {
         status: Ticket.Status = 0,
         creator: Ticket.Person,
     }) !Ticket.Key {
-        const now = timestamp();
-        const alloc = self.tickets.alloc;
-        return try self.tickets.addTicket(.{
-            .title = try SString.fromSlice(alloc, c.title),
-            .description = try SString.fromSlice(alloc, c.description),
+        return try self.actionCreateTicket(c.creator, .{
+            .title = c.title,
+            .description = c.description,
             .parent = c.parent,
             .priority = c.priority,
             .type_ = c.type_,
             .status = c.status,
-            .creator = c.creator,
+        });
+    }
+
+    pub fn actionCreateTicket(
+        self: *Self,
+        user: Ticket.Person,
+        action: History.Event.Action.CreateTicket,
+    ) !Ticket.Key {
+        const now = timestamp();
+        const alloc = self.tickets.alloc;
+
+        const ticket = try self.tickets.addTicket(.{
+            .title = try SString.fromSlice(alloc, action.title),
+            .description = try SString.fromSlice(alloc, action.description),
+            .parent = action.parent,
+            .priority = action.priority,
+            .type_ = action.type_,
+            .status = action.status,
+            .creator = user,
             .created_on = now,
-            .last_updated_by = c.creator,
+            .last_updated_by = user,
             .last_updated_on = now,
         });
+
+        try self.history.addEvent(self.tickets.alloc, .{
+            .timestamp = now,
+            .ticket = ticket,
+            .user = user,
+            .action = .{ .create_ticket = action },
+        });
+
+        return ticket;
     }
 
     /// Delete an existing ticket.
@@ -146,11 +176,7 @@ pub const Gofast = struct {
         //  is ordered by key and that keys are sequential and non-repeating.
         //  Thus, starting at the index `ticket_key-1`, we guarantee that we're
         //  as close to the actual ticket as possible.
-        const index = std.mem.indexOfScalar(
-            Ticket.Key,
-            slice.items(.key)[0..key],
-            key,
-        ) orelse return error.NotFound;
+        const index = try self.tickets.findIndex(key);
 
         //TODO:
         //  Record the changes in some history structure.
@@ -283,26 +309,76 @@ pub const Gofast = struct {
     }
 };
 
-/// Recorder/Replayer of actions performed.
-const Replay = struct {
-    // TODO: This can aid testing greatly if we can record/replay actions.
-    const Action = union(enum) {
-        create_ticket: struct {
-            outcome: anyerror!Ticket.Key,
-            title: SString,
-            desc: SString,
-            parent: ?Ticket.Key = null,
-        },
-        delete_ticket: struct {
-            outcome: anyerror!void,
-            ticket: Ticket.Key,
-        },
-        set_parent: struct {
-            outcome: anyerror!void,
-            ticket: Ticket.Key,
-            parent: ?Ticket.Key = null,
-        },
+/// Record a history of all actions that happen with the Gofast system.
+pub const History = struct {
+    events: std.MultiArrayList(Event) = .{},
+    arena_string: std.heap.ArenaAllocator,
+
+    pub const Event = struct {
+        timestamp: Timestamp,
+        user: Ticket.Person,
+        /// Which ticket was affected by the action.
+        ///
+        /// For CreateTicket, it is the ID of the created ticket.
+        ticket: Ticket.Key,
+        action: Action,
+
+        pub const Timestamp = i64; // std.time.timestamp()
+        pub const Action = union(enum) {
+            create_ticket: CreateTicket,
+            update_ticket: UpdateTicket,
+            update_time: UpdateTime,
+
+            pub const CreateTicket = struct {
+                // TODO: Think of how to store these strings...
+                title: []const u8,
+                description: []const u8,
+                parent: ?Ticket.Key = null,
+                type_: Ticket.Type = 0,
+                priority: Ticket.Priority = 0,
+                status: Ticket.Status = 0,
+            };
+            pub const UpdateTicket = struct {
+                title: ?[]const u8 = null,
+                description: ?[]const u8 = null,
+                parent: ??Ticket.Key = null,
+                type_: ?Ticket.Type = null,
+                priority: ?Ticket.Priority = null,
+                status: Ticket.Status = null,
+                order: ?Ticket.Order = null,
+            };
+            pub const UpdateTime = struct {
+                estimate: Ticket.TimeSpent.Seconds,
+                spent: Ticket.TimeSpent.Seconds,
+            };
+        };
     };
+    const Self = @This();
+
+    pub fn addEvent(self: *Self, alloc: Allocator, event: Event) !void {
+        const arena = self.arena_string.allocator();
+        var mut_event = event;
+
+        // Allocate these separately, as they go to history and will never be changed.
+        switch (mut_event.action) {
+            .create_ticket => |*a| {
+                a.title = try arena.dupe(u8, a.title);
+                a.description = try arena.dupe(u8, a.description);
+            },
+            .update_ticket => |*a| {
+                if (a.title) |*title| title.* = try arena.dupe(u8, title.*);
+                if (a.description) |*description| description.* = try arena.dupe(u8, description.*);
+            },
+            .update_time => {},
+        }
+
+        try self.events.append(alloc, mut_event);
+    }
+
+    pub fn deinit(self: *Self, alloc: Allocator) void {
+        self.arena_string.deinit();
+        self.events.deinit(alloc);
+    }
 };
 
 test Gofast {
@@ -315,7 +391,9 @@ test Gofast {
     try TEST.expect(gf.tickets.max_key == 0);
 
     const ticket1 = try gf.createTicket(.{ .title = "t", .description = "d", .creator = 0 });
-    try TEST.expect(ticket1 == 1);
+    try TEST.expectEqual(1, ticket1);
+    try TEST.expectEqual(1, gf.tickets.tickets.len);
+    try TEST.expectEqual(1, gf.tickets.tickets.items(.key)[0]);
 
     try gf.deleteTicket(ticket1);
 }
@@ -406,6 +484,8 @@ test "Gofast.persistance" {
         try gofast.logWork(ticket3, person1, 0, 120);
         try gofast.logWork(ticket1, person1, 0, 6000);
         try gofast.save();
+
+        // try TEST.expectEqual(3, gofast.history.events.len);
     }
 
     // Load the persistance data and check if everything got loaded correctly.
@@ -436,53 +516,70 @@ test "Gofast.persistance" {
         const person1 = 0;
         const person2 = 1;
 
-        const time_spent0 = tickets.ticket_time_spent.get(0);
-        try TEST.expectEqual(person1, time_spent0.person);
-        try TEST.expectEqual(1, time_spent0.ticket);
-        try TEST.expectEqual(300, time_spent0.time.estimate);
-        try TEST.expectEqual(6000, time_spent0.time.spent);
+        const ticket1 = tickets.tickets.items(.key)[0];
+        const ticket2 = tickets.tickets.items(.key)[1];
+        const ticket3 = tickets.tickets.items(.key)[2];
+        {
+            // ticket - title
+            try TEST.expectEqualStrings("Test ticket 1", gofast.tickets.tickets.items(.title)[0].s);
+            try TEST.expectEqualStrings("Test ticket 2", gofast.tickets.tickets.items(.title)[1].s);
+            try TEST.expectEqualStrings("Test ticket 3", gofast.tickets.tickets.items(.title)[2].s);
+            // ticket - description
+            try TEST.expectEqualStrings("Test description 1", gofast.tickets.tickets.items(.description)[0].s);
+            try TEST.expectEqualStrings("Test description 2", gofast.tickets.tickets.items(.description)[1].s);
+            try TEST.expectEqualStrings("Test description 3", gofast.tickets.tickets.items(.description)[2].s);
+            // ticket - parent
+            try TEST.expectEqual(null, gofast.tickets.tickets.items(.parent)[0]);
+            try TEST.expectEqual(null, gofast.tickets.tickets.items(.parent)[1]);
+            try TEST.expectEqual(ticket1, gofast.tickets.tickets.items(.parent)[2]);
+            // ticket - creator
+            try TEST.expectEqual(person1, gofast.tickets.tickets.items(.creator)[0]);
+            try TEST.expectEqual(person2, gofast.tickets.tickets.items(.creator)[1]);
+            try TEST.expectEqual(person1, gofast.tickets.tickets.items(.creator)[2]);
+            // ticket - created_on
+            try TEST.expectEqual(ticket_create_date[0], gofast.tickets.tickets.items(.created_on)[0]);
+            try TEST.expectEqual(ticket_create_date[1], gofast.tickets.tickets.items(.created_on)[1]);
+            try TEST.expectEqual(ticket_create_date[2], gofast.tickets.tickets.items(.created_on)[2]);
+            // ticket - last_updated_on
+            try TEST.expectEqual(ticket_create_date[0], gofast.tickets.tickets.items(.last_updated_on)[0]);
+            try TEST.expectEqual(ticket_create_date[1], gofast.tickets.tickets.items(.last_updated_on)[1]);
+            try TEST.expectEqual(ticket_create_date[2], gofast.tickets.tickets.items(.last_updated_on)[2]);
+            // ticket - last_updated_by
+            try TEST.expectEqual(person1, gofast.tickets.tickets.items(.last_updated_by)[0]);
+            try TEST.expectEqual(person2, gofast.tickets.tickets.items(.last_updated_by)[1]);
+            try TEST.expectEqual(person1, gofast.tickets.tickets.items(.last_updated_by)[2]);
+        }
+        // time spent
+        {
+            const time_spent0 = tickets.ticket_time_spent.get(0);
+            try TEST.expectEqual(person1, time_spent0.person);
+            try TEST.expectEqual(ticket1, time_spent0.ticket);
+            try TEST.expectEqual(300, time_spent0.time.estimate);
+            try TEST.expectEqual(6000, time_spent0.time.spent);
+            const time_spent1 = tickets.ticket_time_spent.get(1);
+            try TEST.expectEqual(person2, time_spent1.person);
+            try TEST.expectEqual(ticket1, time_spent1.ticket);
+            try TEST.expectEqual(350, time_spent1.time.estimate);
+            try TEST.expectEqual(0, time_spent1.time.spent);
+            const time_spent2 = tickets.ticket_time_spent.get(2);
+            try TEST.expectEqual(person2, time_spent2.person);
+            try TEST.expectEqual(ticket3, time_spent2.ticket);
+            try TEST.expectEqual(1200, time_spent2.time.estimate);
+            try TEST.expectEqual(0, time_spent2.time.spent);
+            const time_spent3 = tickets.ticket_time_spent.get(3);
+            try TEST.expectEqual(person2, time_spent3.person);
+            try TEST.expectEqual(ticket2, time_spent3.ticket);
+            try TEST.expectEqual(0, time_spent3.time.estimate);
+            try TEST.expectEqual(600, time_spent3.time.spent);
+            const time_spent4 = tickets.ticket_time_spent.get(4);
+            try TEST.expectEqual(person1, time_spent4.person);
+            try TEST.expectEqual(ticket3, time_spent4.ticket);
+            try TEST.expectEqual(0, time_spent4.time.estimate);
+            try TEST.expectEqual(120, time_spent4.time.spent);
+        }
 
-        const time_spent1 = tickets.ticket_time_spent.get(1);
-        try TEST.expectEqual(person2, time_spent1.person);
-        try TEST.expectEqual(1, time_spent1.ticket);
-        try TEST.expectEqual(350, time_spent1.time.estimate);
-        try TEST.expectEqual(0, time_spent1.time.spent);
-
-        const time_spent2 = tickets.ticket_time_spent.get(2);
-        try TEST.expectEqual(person2, time_spent2.person);
-        try TEST.expectEqual(3, time_spent2.ticket);
-        try TEST.expectEqual(1200, time_spent2.time.estimate);
-        try TEST.expectEqual(0, time_spent2.time.spent);
-
-        const time_spent3 = tickets.ticket_time_spent.get(3);
-        try TEST.expectEqual(person2, time_spent3.person);
-        try TEST.expectEqual(2, time_spent3.ticket);
-        try TEST.expectEqual(0, time_spent3.time.estimate);
-        try TEST.expectEqual(600, time_spent3.time.spent);
-
-        const time_spent4 = tickets.ticket_time_spent.get(4);
-        try TEST.expectEqual(person1, time_spent4.person);
-        try TEST.expectEqual(3, time_spent4.ticket);
-        try TEST.expectEqual(0, time_spent4.time.estimate);
-        try TEST.expectEqual(120, time_spent4.time.spent);
-
-        try TEST.expectEqual(ticket_create_date[0], gofast.tickets.tickets.items(.created_on)[0]);
-        try TEST.expectEqual(ticket_create_date[1], gofast.tickets.tickets.items(.created_on)[1]);
-        try TEST.expectEqual(ticket_create_date[2], gofast.tickets.tickets.items(.created_on)[2]);
-
-        try TEST.expectEqual(ticket_create_date[0], gofast.tickets.tickets.items(.last_updated_on)[0]);
-        try TEST.expectEqual(ticket_create_date[1], gofast.tickets.tickets.items(.last_updated_on)[1]);
-        try TEST.expectEqual(ticket_create_date[2], gofast.tickets.tickets.items(.last_updated_on)[2]);
-
-        try TEST.expectEqual(1, gofast.tickets.tickets.items(.parent)[2].?);
-
-        try TEST.expectEqual(person1, gofast.tickets.tickets.items(.creator)[0]);
-        try TEST.expectEqual(person2, gofast.tickets.tickets.items(.creator)[1]);
-        try TEST.expectEqual(person1, gofast.tickets.tickets.items(.creator)[2]);
-
-        try TEST.expectEqual(person1, gofast.tickets.tickets.items(.last_updated_by)[0]);
-        try TEST.expectEqual(person2, gofast.tickets.tickets.items(.last_updated_by)[1]);
-        try TEST.expectEqual(person1, gofast.tickets.tickets.items(.last_updated_by)[2]);
+        // history
+        // try TEST.expectEqual(3, gofast.history.events.len);
     }
 }
 test "Gofast.update.order" {
@@ -515,4 +612,3 @@ test "Gofast.update.order" {
     try TEST.expectEqual(person2, gofast.tickets.tickets.items(.last_updated_by)[index]);
     try TEST.expectEqual(200, gofast.tickets.tickets.items(.details)[index].order);
 }
-test Replay {}
