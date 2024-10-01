@@ -127,9 +127,10 @@ document.addEventListener("alpine:init", () => {
             fetch("/api/tickets").then(r => r.json()).then(r => {
                 const count = r.count; // Not used yet, but shows how many elements were received.
                 const max_key = r.max_key;
-                this.names.priority = r.name_priorities;
-                this.names.status = r.name_statuses;
-                this.names.type = r.name_types;
+                this.names.priority = r.names.priorities;
+                this.names.status = r.names.statuses;
+                this.names.type = r.names.types;
+                this.names.people = r.names.people;
                 const keys = r.tickets.keys;
                 const parents = r.tickets.parents;
                 const titles = r.tickets.titles;

@@ -11,7 +11,6 @@
         "**/.DS_Store": true,
         "**/Thumbs.db": true,
         "**/.zig-cache": true,
-        "**/zig-out": true,
         "gofast-*.zip": true,
         "gofast-*.7z": true,
     },

@@ -177,10 +177,10 @@ pub fn initGiberish(
     const now_start = now_end - years_2;
 
     for (0..n_tickets) |_| {
-        const max_type: Gofast.Ticket.Type = @intCast(gofast.name_types.items.len - 1);
-        const max_priority: Gofast.Ticket.Priority = @intCast(gofast.name_priorities.items.len - 1);
-        const max_status: Gofast.Ticket.Status = @intCast(gofast.name_statuses.items.len - 1);
-        const max_person: Gofast.Person = @intCast(gofast.name_people.items.len - 1);
+        const max_type: Gofast.Ticket.Type = @intCast(gofast.names.types.items.len - 1);
+        const max_priority: Gofast.Ticket.Priority = @intCast(gofast.names.priorities.items.len - 1);
+        const max_status: Gofast.Ticket.Status = @intCast(gofast.names.statuses.items.len - 1);
+        const max_person: Gofast.Person = @intCast(gofast.names.people.items.len - 1);
 
         var rand_title = try title_gen.generateWords(random, alloc);
         defer rand_title.deinit(alloc);
@@ -191,12 +191,9 @@ pub fn initGiberish(
         const rand_priority = std.rand.intRangeAtMost(random, Gofast.Ticket.Priority, 0, max_priority);
         const rand_status = std.rand.intRangeAtMost(random, Gofast.Ticket.Status, 0, max_status);
         const rand_creator = std.rand.intRangeAtMost(random, Gofast.Person, 0, max_person);
-
         const rand_create = std.rand.intRangeAtMost(random, i64, now_start, now_end);
-        const rand_update = std.rand.intRangeAtMost(random, i64, rand_create, now_end);
-        const rand_updater = std.rand.intRangeAtMost(random, Gofast.Person, 0, max_person);
 
-        const ticket = gofast.createTicket(rand_creator, .{
+        const ticket = gofast.createTicket(rand_creator, rand_create, .{
             .title = rand_title.s,
             .description = rand_description.s,
             .parent = null,
@@ -205,7 +202,10 @@ pub fn initGiberish(
             .status = rand_status,
         }) catch unreachable;
 
-        gofast.tickets.items(.created_on)[ticket - 1] = rand_create;
+        const rand_update = std.rand.intRangeAtMost(random, i64, rand_create, now_end);
+        const rand_updater = std.rand.intRangeAtMost(random, Gofast.Person, 0, max_person);
+
+        // TODO: Make this actually generate history events.
         gofast.tickets.items(.last_updated_on)[ticket - 1] = rand_update;
         gofast.tickets.items(.last_updated_by)[ticket - 1] = rand_updater;
     }
@@ -245,8 +245,8 @@ pub fn initGiberish(
             );
 
             // Generate them in minutes so we don't have to deal with seconds
-            const estimated = std.rand.intRangeAtMost(random, Gofast.TimeSpent.Seconds, 1, 60 * 60) * 60;
-            const worktime = std.rand.intRangeAtMost(random, Gofast.TimeSpent.Seconds, 1, 60 * 60) * 60;
+            const estimated = std.rand.intRangeAtMost(random, Gofast.TicketTime.Seconds, 1, 60 * 60) * 60;
+            const worktime = std.rand.intRangeAtMost(random, Gofast.TicketTime.Seconds, 1, 60 * 60) * 60;
             const time_started = std.rand.intRangeAtMost(random, i64, 1727000000, std.time.timestamp());
 
             try gofast.setEstimate(key, person, estimated);

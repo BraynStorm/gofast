@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 
 /// An array that uses @Vector as an underlying storage,
 /// and uses a sentinel value for length.
@@ -19,7 +20,7 @@ pub fn SIMDSentinelArray(comptime T: type, maybeCapacity: ?usize, sentinel: T) t
             //
             );
         });
-        const Vector = @Vector(capacity, T);
+        pub const Vector = @Vector(capacity, T);
         const Index = std.simd.VectorIndex(Vector);
         const Count = std.simd.VectorCount(Vector);
         const Self = @This();
@@ -28,7 +29,7 @@ pub fn SIMDSentinelArray(comptime T: type, maybeCapacity: ?usize, sentinel: T) t
         pub inline fn init() Self {
             // Require the capcity to be an even number.
             // TODO: Also require to be a power of two, but that's beside the point.
-            comptime std.debug.assert(((@sizeOf(T) * capacity) % 2 == 0));
+            comptime assert(((@sizeOf(T) * capacity) % 2 == 0));
             return Self{ .items = @splat(sentinel) };
         }
 
@@ -44,7 +45,7 @@ pub fn SIMDSentinelArray(comptime T: type, maybeCapacity: ?usize, sentinel: T) t
         }
         /// Find the index where this
         pub inline fn indexOf(self: *const Self, item: T) ?Index {
-            std.debug.assert(item != sentinel);
+            assert(item != sentinel);
             return std.simd.firstIndexOfValue(self.items, item);
         }
 
@@ -59,7 +60,7 @@ pub fn SIMDSentinelArray(comptime T: type, maybeCapacity: ?usize, sentinel: T) t
         }
 
         pub inline fn maybeAddOne(self: *Self, item: T) bool {
-            std.debug.assert(item != sentinel);
+            assert(item != sentinel);
             if (std.simd.firstIndexOfValue(self.items, sentinel)) |idx| {
                 self.items[idx] = item;
                 return true;

@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 const SString = @import("smallstring.zig").ShortString;
 const SIMDArray = @import("simdarray.zig").SIMDSentinelArray;
 
@@ -32,40 +33,36 @@ const log = std.log.scoped(.Gofast);
 pub const Gofast = struct {
     /// RwLock to allow multiple readers, but only one writer.
     lock: std.Thread.RwLock = .{},
-
-    /// If this is notnull, the data has been loaded from this file,
-    /// and all changes are saved in said file.
+    /// Allocator stored for convenience.
+    alloc: Allocator = undefined,
+    /// Where do we save the data. Null - in-memory storage only.
     persistance: ?std.fs.File = null,
 
     /// Storage of keys and other one-to-one things.
     ///
     /// Always kept sorted by .key. (Implcit)
     tickets: Tickets = .{},
-    ticket_time_spent: std.MultiArrayList(TimeSpent) = .{},
+    time_spent: std.MultiArrayList(TicketTime) = .{},
     // PERF: Convert to a hashmap with a linked list.
-    graph_children: std.MultiArrayList(Ticket.FatLink) = .{},
-
-    // STYLE:
-    //  Make these a separate struct.
-    name_types: StringMap = .{},
-    name_priorities: StringMap = .{},
-    name_statuses: StringMap = .{},
-    name_people: StringMap = .{},
+    graph_children: GraphChildren = .{},
+    names: struct {
+        types: StringMap = .{},
+        priorities: StringMap = .{},
+        statuses: StringMap = .{},
+        people: StringMap = .{},
+    } = .{},
 
     /// Store the tickets in the system.
     history: History,
 
-    /// Allocator stored for convenience.
-    alloc: Allocator = undefined,
     /// = largest_ticket_number_ever.
     max_ticket_key: u32 = 0,
 
     const Self = @This();
 
-    pub const MalIndex = usize;
-    pub const StringMap = std.ArrayListUnmanaged(SString);
-
+    pub const TicketIndex = usize;
     pub const Tickets = std.MultiArrayList(Ticket);
+    pub const Timestamp = i64;
     pub const Person = u32;
     pub const Ticket = struct {
         key: Key,
@@ -127,7 +124,7 @@ pub const Gofast = struct {
     //  There's probably a better way to arrange this,
     //  such that we can easily find stuff.
     /// Use a MAL to store these.
-    pub const TimeSpent = struct {
+    pub const TicketTime = struct {
         ticket: Ticket.Key,
         person: Person,
         time: packed struct {
@@ -137,6 +134,8 @@ pub const Gofast = struct {
 
         pub const Seconds = u32; // Can fit ~500years of full workdays
     };
+    pub const StringMap = std.ArrayListUnmanaged(SString);
+    pub const GraphChildren = std.MultiArrayList(Ticket.FatLink);
     const Error = error{
         NotFound,
         Corrupted,
@@ -154,11 +153,11 @@ pub const Gofast = struct {
             },
         };
         // Reserve plenty of space for type_names.
-        try g.name_types.ensureTotalCapacity(alloc, 8);
+        try g.names.types.ensureTotalCapacity(alloc, 8);
         // Reserve plenty of space for priority_names.
-        try g.name_priorities.ensureTotalCapacity(alloc, 8);
+        try g.names.priorities.ensureTotalCapacity(alloc, 8);
         // Reserve plenty of space for status_names.
-        try g.name_statuses.ensureTotalCapacity(alloc, 16);
+        try g.names.statuses.ensureTotalCapacity(alloc, 16);
         try g.tickets.ensureTotalCapacity(alloc, INITIAL_CAPACITY);
 
         const cwd = std.fs.cwd();
@@ -204,11 +203,11 @@ pub const Gofast = struct {
             titles[i].deinit(alloc);
             descriptions[i].deinit(alloc);
         }
-        self.ticket_time_spent.deinit(alloc);
-        Gofast.deinit_stringmap(alloc, &self.name_statuses);
-        Gofast.deinit_stringmap(alloc, &self.name_types);
-        Gofast.deinit_stringmap(alloc, &self.name_priorities);
-        Gofast.deinit_stringmap(alloc, &self.name_people);
+        self.time_spent.deinit(alloc);
+        Gofast.deinit_stringmap(alloc, &self.names.statuses);
+        Gofast.deinit_stringmap(alloc, &self.names.types);
+        Gofast.deinit_stringmap(alloc, &self.names.priorities);
+        Gofast.deinit_stringmap(alloc, &self.names.people);
         self.history.deinit(alloc);
         self.tickets.deinit(alloc);
     }
@@ -223,22 +222,23 @@ pub const Gofast = struct {
             return error.NoPersistance;
         }
     }
-
     /// Generate a "now" timestamp, in the units expected by Gofast (ms).
-    pub fn timestamp() i64 {
+    pub fn timestamp() Timestamp {
         return std.time.milliTimestamp();
     }
 
     /// Create a new ticket
+    ///
+    /// now = Gofast.timestamp()
     pub fn createTicket(
         self: *Self,
         craetor: Person,
+        now: Timestamp,
         action: History.Event.Action.CreateTicket,
     ) !Ticket.Key {
-        const now = timestamp();
         const alloc = self.alloc;
 
-        const ticket = try self.addTicket(.{
+        const ticket = try self.addTicketNoHistory(.{
             .title = try SString.fromSlice(alloc, action.title),
             .description = try SString.fromSlice(alloc, action.description),
             .parent = action.parent,
@@ -350,8 +350,8 @@ pub const Gofast = struct {
         name: []const u8,
     }) !Ticket.Priority {
         const alloc = self.alloc;
-        const id = self.name_priorities.items.len;
-        try self.name_priorities.append(
+        const id = self.names.priorities.items.len;
+        try self.names.priorities.append(
             alloc,
             try SString.fromSlice(alloc, data.name),
         );
@@ -363,8 +363,8 @@ pub const Gofast = struct {
         name: []const u8,
     }) !Ticket.Status {
         const alloc = self.alloc;
-        const id = self.name_statuses.items.len;
-        try self.name_statuses.append(
+        const id = self.names.statuses.items.len;
+        try self.names.statuses.append(
             alloc,
             try SString.fromSlice(alloc, data.name),
         );
@@ -376,8 +376,8 @@ pub const Gofast = struct {
         name: []const u8,
     }) !Ticket.Type {
         const alloc = self.alloc;
-        const id = self.name_types.items.len;
-        try self.name_types.append(
+        const id = self.names.types.items.len;
+        try self.names.types.append(
             alloc,
             try SString.fromSlice(alloc, data.name),
         );
@@ -387,8 +387,8 @@ pub const Gofast = struct {
     /// Create a new Person
     pub fn createPerson(self: *Self, data: struct { name: []const u8 }) !Person {
         const alloc = self.alloc;
-        const id = self.name_people.items.len;
-        try self.name_people.append(
+        const id = self.names.people.items.len;
+        try self.names.people.append(
             alloc,
             try SString.fromSlice(alloc, data.name),
         );
@@ -396,16 +396,16 @@ pub const Gofast = struct {
     }
 
     pub fn priorityName(self: *Self, p: Ticket.Priority) []const u8 {
-        return self.name_priorities.items[@intCast(p)].s;
+        return self.names.priorities.items[@intCast(p)].s;
     }
     pub fn statusName(self: *Self, p: Ticket.Status) []const u8 {
-        return self.name_statuses.items[@intCast(p)].s;
+        return self.names.statuses.items[@intCast(p)].s;
     }
     pub fn typeName(self: *Self, p: Ticket.Type) []const u8 {
-        return self.name_types.items[@intCast(p)].s;
+        return self.names.types.items[@intCast(p)].s;
     }
     pub fn personName(self: *Self, p: Person) []const u8 {
-        return self.name_people.items[@intCast(p)].s;
+        return self.names.people.items[@intCast(p)].s;
     }
 
     pub fn loadFromFile(self: *Self, reader: std.fs.File.Reader) !void {
@@ -446,28 +446,31 @@ pub const Gofast = struct {
         for (0..slice.len) |i| {
             var ss = &slice[i];
             const len = try reader.readInt(u32, .little);
+            // std.debug.print("loadSStringSliceV0: allocating {}\n", .{len});
             ss.s = try alloc.alloc(u8, len);
             errdefer ss.deinit(alloc);
-            try reader.readNoEof(ss.s);
-            // log.debug("loadSStringSliceV0: [{}] len={}, content={s}>", .{ i, len, ss.s });
+            try reader.readNoEof(ss.s[0..len]);
+            // std.debug.print("loadSStringSliceV0: [{}] len={}, content={s}>\n", .{ i, len, ss.s });
+            std.debug.print("loadSStringSliceV0: [{}] len={}\n", .{ i, len });
         }
     }
     fn loadFromV0(self: *Self, reader: std.fs.File.Reader) !void {
-        try Self.loadStringMapV0(self.alloc, reader, &self.name_types);
-        // log.debug("loadFromV0: Loaded {} name_types", .{self.name_types.items.len});
+        try Self.loadStringMapV0(self.alloc, reader, &self.names.types);
+        log.info("loadFromV0: Loaded {} types", .{self.names.types.items.len});
 
-        try Self.loadStringMapV0(self.alloc, reader, &self.name_priorities);
-        // log.debug("loadFromV0: Loaded {} name_priorities", .{self.name_priorities.items.len});
+        try Self.loadStringMapV0(self.alloc, reader, &self.names.priorities);
+        log.info("loadFromV0: Loaded {} priorities", .{self.names.priorities.items.len});
 
-        try Self.loadStringMapV0(self.alloc, reader, &self.name_statuses);
-        // log.debug("loadFromV0: Loaded {} name_statuses", .{self.name_statuses.items.len});
+        try Self.loadStringMapV0(self.alloc, reader, &self.names.statuses);
+        log.info("loadFromV0: Loaded {} statuses", .{self.names.statuses.items.len});
 
-        try Self.loadStringMapV0(self.alloc, reader, &self.name_people);
+        try Self.loadStringMapV0(self.alloc, reader, &self.names.people);
+        log.info("loadFromV0: Loaded {} people", .{self.names.people.items.len});
 
         const max_key = try reader.readInt(u32, .little);
-        // log.debug("loadFromV0: max_key={}", .{max_key});
+        log.info("loadFromV0: max_key={}", .{max_key});
         const n_tickets = try reader.readInt(u32, .little);
-        // log.debug("loadFromV0: n_tickets={}", .{n_tickets});
+        log.info("loadFromV0: n_tickets={}", .{n_tickets});
 
         self.max_ticket_key = max_key;
 
@@ -485,7 +488,7 @@ pub const Gofast = struct {
             i.type = try reader.readInt(u8, .little);
             i.status = try reader.readInt(u8, .little);
             i.priority = try reader.readInt(u8, .little);
-            comptime std.debug.assert(@sizeOf(u32) == @sizeOf(Ticket.Order));
+            comptime assert(@sizeOf(u32) == @sizeOf(Ticket.Order));
             i.order = @bitCast(try reader.readInt(u32, .little));
         }
         for (allslice.items(.creator)) |*i| i.* = try reader.readInt(u32, .little);
@@ -504,6 +507,7 @@ pub const Gofast = struct {
             parents[i] = null;
         }
         const n_graphs = try reader.readInt(usize, .little);
+        log.info("loadFromV0: n_graphs={}", .{n_graphs});
         for (0..n_graphs) |i_graph| {
             // Unused for now
             _ = i_graph;
@@ -511,28 +515,28 @@ pub const Gofast = struct {
             switch (try reader.readInt(u8, .little)) {
                 // Child Graph
                 0 => {
+                    log.info("loadFromV0: loading graph 0", .{});
                     const n_graph_len = try reader.readInt(usize, .little);
-                    // log.debug("loadFromV0: n_graph_len={}", .{n_graph_len});
 
+                    log.info("loadFromV0: n_graph_len={}", .{n_graph_len});
                     try self.graph_children.resize(self.alloc, n_graph_len);
                     for (self.graph_children.items(.from)) |*from| {
                         from.* = try reader.readInt(u32, .little);
                     }
-                    for (self.graph_children.items(.to)) |*to| {
+                    for (self.graph_children.items(.from), self.graph_children.items(.to)) |from, *to| {
                         for (0..Ticket.FatLink.To.capacity) |i| {
-                            if (to.items[i] == 0) break;
-                            to.*.items[i] = try reader.readInt(u32, .little);
+                            const parent_key = from;
+                            const child_key = try reader.readInt(u32, .little);
+                            to.*.items[i] = child_key;
+                            log.info("loadFromV0: link: {} -> {}", .{ from, child_key });
+                            if (child_key != 0) {
+                                // Actually set the .parent field.
+                                const child_index = try self.findTicketIndex(child_key);
+                                parents[child_index] = parent_key;
+                            }
                         }
                     }
-
-                    // Actually set the .parent field.
-                    for (self.graph_children.items(.from), self.graph_children.items(.to)) |from, to| {
-                        for (0..Ticket.FatLink.To.capacity) |i| {
-                            if (to.items[i] == 0) break;
-                            const parent_key = try self.findTicketIndex(to.items[i]);
-                            parents[parent_key] = from;
-                        }
-                    }
+                    self.compact_children_graph();
                 },
                 else => return error.UnknownGraphType,
             }
@@ -541,8 +545,8 @@ pub const Gofast = struct {
         // Read ticket_time_spent
         {
             const n_time_spent = try reader.readInt(usize, .little);
-            try self.ticket_time_spent.resize(self.alloc, n_time_spent);
-            const time_spent_slice = self.ticket_time_spent.slice();
+            try self.time_spent.resize(self.alloc, n_time_spent);
+            const time_spent_slice = self.time_spent.slice();
 
             const ts_people = time_spent_slice.items(.person);
             const ts_time = time_spent_slice.items(.time);
@@ -554,6 +558,58 @@ pub const Gofast = struct {
             };
         }
     }
+    /// Remove holes and combine split parents into tight(er) buckets.
+    fn compact_children_graph(self: *Self) void {
+        var i: usize = 0;
+        const slice = self.graph_children.slice();
+        const tos = slice.items(.to);
+        const froms = slice.items(.from);
+
+        const t_start_comapct = std.time.nanoTimestamp();
+        while (true) {
+            // Important! Do not for(..) loop this, as it will fuck up when we
+            // try to delete thing WHILE iterating.
+            if (i >= self.graph_children.len) {
+                // We're done.
+                break;
+            }
+
+            const from = froms[i];
+            const to = tos[i];
+
+            // Check for empty buckets
+            if (to.items[0] == 0) {
+                // If the first one is 0, the all of the other should be, right?
+                assert(Ticket.FatLink.To.capacity == std.simd.countTrues(
+                    to.items == @as(Ticket.FatLink.To.Vector, @splat(0)),
+                ));
+
+                std.log.info("compact_children_graph: Removing [{}] {} -> 16x0s", .{ i, from });
+
+                // We don't care about the order, so we swap-remove.
+                self.graph_children.swapRemove(i);
+                // Important! "Repeat" the current iteration, don't i+1.
+                continue;
+            }
+
+            i += 1;
+        }
+        const t_end_compact = std.time.nanoTimestamp();
+
+        const Compare = struct {
+            from: []Ticket.Key,
+            pub fn lessThan(s: *const @This(), a: usize, b: usize) bool {
+                return s.from[a] < s.from[b];
+            }
+        };
+
+        self.graph_children.sort(Compare{ .from = froms });
+        const t_end_sort = std.time.nanoTimestamp();
+
+        std.log.info("compact_children_graph: compacting took {}us", .{@divTrunc((t_start_comapct - t_end_compact), std.time.ns_per_us)});
+        std.log.info("compact_children_graph: sorting took {}us", .{@divTrunc((t_end_sort - t_end_compact), std.time.ns_per_us)});
+    }
+    // fn lessThan_GraphChildren(self: [] const , a: usize, b: usize) bool {}
     fn deinit_stringmap(alloc: Allocator, stringmap: *StringMap) void {
         var i = stringmap.items.len;
         while (i > 0) {
@@ -581,13 +637,13 @@ pub const Gofast = struct {
         try writer.writeInt(u32, 0, .little);
 
         //name_types
-        try saveV0StringMap(writer, &self.name_types);
+        try saveV0StringMap(writer, &self.names.types);
         //name_priorities
-        try saveV0StringMap(writer, &self.name_priorities);
+        try saveV0StringMap(writer, &self.names.priorities);
         //name_statuses
-        try saveV0StringMap(writer, &self.name_statuses);
+        try saveV0StringMap(writer, &self.names.statuses);
         //name_people
-        try saveV0StringMap(writer, &self.name_people);
+        try saveV0StringMap(writer, &self.names.people);
 
         //max_key
         try writer.writeInt(u32, self.max_ticket_key, .little);
@@ -607,7 +663,7 @@ pub const Gofast = struct {
             try writer.writeInt(u8, e.type, .little);
             try writer.writeInt(u8, e.status, .little);
             try writer.writeInt(u8, e.priority, .little);
-            comptime std.debug.assert(@sizeOf(u32) == @sizeOf(Ticket.Order));
+            comptime assert(@sizeOf(u32) == @sizeOf(Ticket.Order));
             try writer.writeInt(u32, @bitCast(e.order), .little);
         }
         for (allslice.items(.creator)) |e| try writer.writeInt(u32, e, .little);
@@ -649,7 +705,7 @@ pub const Gofast = struct {
 
         // ticket_time_spent
         {
-            const ticket_time_slice = self.ticket_time_spent.slice();
+            const ticket_time_slice = self.time_spent.slice();
             try writer.writeInt(usize, ticket_time_slice.len, .little);
             for (ticket_time_slice.items(.ticket)) |ticket| {
                 try writer.writeInt(u32, ticket, .little);
@@ -667,7 +723,7 @@ pub const Gofast = struct {
     /// Add a new ticket.
     ///
     /// It's key will be auto-assigned.
-    fn addTicket(
+    fn addTicketNoHistory(
         self: *Self,
         c: struct {
             title: SString,
@@ -878,7 +934,7 @@ pub const Gofast = struct {
         }
     }
 
-    pub fn findTicketIndex(self: *const Self, key: Ticket.Key) Error!MalIndex {
+    pub fn findTicketIndex(self: *const Self, key: Ticket.Key) Error!TicketIndex {
         const max_index = @min(key, self.tickets.len);
         return std.mem.indexOfScalar(
             Ticket.Key,
@@ -930,12 +986,12 @@ pub const Gofast = struct {
             return error.NegativeWorktime;
         }
 
-        const spent: Gofast.TimeSpent.Seconds = @intCast(worked_seconds_i64);
+        const spent: Gofast.TicketTime.Seconds = @intCast(worked_seconds_i64);
 
         // TODO: Check if ticket actually exists.
         // TODO(histroy): Save the start/end times in a separate structure.
 
-        var allslice = self.ticket_time_spent.slice();
+        var allslice = self.time_spent.slice();
 
         for (allslice.items(.ticket), allslice.items(.person), 0..) |t, p, i| {
             if (t == ticket and p == person) {
@@ -948,7 +1004,7 @@ pub const Gofast = struct {
             }
         } else {
             // We didn't find an entry matching the ticket-person.
-            try self.ticket_time_spent.append(self.alloc, .{
+            try self.time_spent.append(self.alloc, .{
                 .ticket = ticket,
                 .person = person,
                 .time = .{ .spent = spent },
@@ -961,12 +1017,12 @@ pub const Gofast = struct {
         self: *Self,
         ticket: Gofast.Ticket.Key,
         person: Person,
-        estimate: Gofast.TimeSpent.Seconds,
+        estimate: Gofast.TicketTime.Seconds,
     ) !void {
         // TODO: Check if ticket actually exists.
         // TODO(histroy): Save the start/end times in a separate structure.
 
-        var allslice = self.ticket_time_spent.slice();
+        var allslice = self.time_spent.slice();
 
         for (allslice.items(.ticket), allslice.items(.person), 0..) |t, p, i| {
             if (t == ticket and p == person) {
@@ -979,7 +1035,7 @@ pub const Gofast = struct {
             }
         } else {
             // We didn't find an entry matchin the ticket-person.
-            try self.ticket_time_spent.append(self.alloc, .{
+            try self.time_spent.append(self.alloc, .{
                 .ticket = ticket,
                 .person = person,
                 .time = .{ .estimate = estimate },
@@ -1032,8 +1088,8 @@ pub const History = struct {
                 order: ?Gofast.Ticket.Order = null,
             };
             pub const UpdateTime = struct {
-                estimate: Gofast.TimeSpent.Seconds,
-                spent: Gofast.TimeSpent.Seconds,
+                estimate: Gofast.TicketTime.Seconds,
+                spent: Gofast.TicketTime.Seconds,
             };
         };
     };
@@ -1074,7 +1130,7 @@ test Gofast {
 
     try TEST.expect(gf.max_ticket_key == 0);
 
-    const ticket1 = try gf.createTicket(0, .{ .title = "t", .description = "d" });
+    const ticket1 = try gf.createTicket(0, Gofast.timestamp(), .{ .title = "t", .description = "d" });
     try TEST.expectEqual(1, ticket1);
     try TEST.expectEqual(1, gf.tickets.len);
     try TEST.expectEqual(1, gf.tickets.items(.key)[0]);
@@ -1107,45 +1163,45 @@ test "Gofast.persistance" {
         defer gofast.deinit();
 
         // Sanity check, Gofast starts with nothing predefined.
-        try TEST.expectEqual(0, gofast.name_priorities.items.len);
-        try TEST.expectEqual(0, gofast.name_statuses.items.len);
-        try TEST.expectEqual(0, gofast.name_types.items.len);
+        try TEST.expectEqual(0, gofast.names.priorities.items.len);
+        try TEST.expectEqual(0, gofast.names.statuses.items.len);
+        try TEST.expectEqual(0, gofast.names.types.items.len);
         try TEST.expectEqual(0, gofast.tickets.len);
-        try TEST.expectEqual(0, gofast.ticket_time_spent.len);
+        try TEST.expectEqual(0, gofast.time_spent.len);
 
         // Are we even going to attempt saving?
         try TEST.expect(gofast.persistance != null);
 
         // Statuses
         try TEST.expectEqual(0, try gofast.createStatus(.{ .name = "status0" }));
-        try TEST.expectEqual(1, gofast.name_statuses.items.len);
+        try TEST.expectEqual(1, gofast.names.statuses.items.len);
 
         // Priorities
         try TEST.expectEqual(0, try gofast.createPriority(.{ .name = "priority0" }));
         try TEST.expectEqual(1, try gofast.createPriority(.{ .name = "priority1" }));
-        try TEST.expectEqual(2, gofast.name_priorities.items.len);
+        try TEST.expectEqual(2, gofast.names.priorities.items.len);
 
         // Types
         try TEST.expectEqual(0, try gofast.createType(.{ .name = "type0" }));
         try TEST.expectEqual(1, try gofast.createType(.{ .name = "type1" }));
         try TEST.expectEqual(2, try gofast.createType(.{ .name = "type2" }));
-        try TEST.expectEqual(3, gofast.name_types.items.len);
+        try TEST.expectEqual(3, gofast.names.types.items.len);
 
         // People
         const person1 = try gofast.createPerson(.{ .name = "Bozhidar" });
         const person2 = try gofast.createPerson(.{ .name = "Stoyanov" });
 
-        const ticket1 = try gofast.createTicket(person1, .{
+        const ticket1 = try gofast.createTicket(person1, Gofast.timestamp(), .{
             .title = "Test ticket 1",
             .description = "Test description 1",
         });
 
-        const ticket2 = try gofast.createTicket(person2, .{
+        const ticket2 = try gofast.createTicket(person2, Gofast.timestamp(), .{
             .title = "Test ticket 2",
             .description = "Test description 2",
         });
 
-        const ticket3 = try gofast.createTicket(person1, .{
+        const ticket3 = try gofast.createTicket(person1, Gofast.timestamp(), .{
             .title = "Test ticket 3",
             .description = "Test description 3",
             .parent = ticket1,
@@ -1173,24 +1229,24 @@ test "Gofast.persistance" {
         var gofast = try Gofast.init(alloc, filepath);
         defer gofast.deinit();
 
-        try TEST.expectEqual(1, gofast.name_statuses.items.len);
+        try TEST.expectEqual(1, gofast.names.statuses.items.len);
         try TEST.expectEqualStrings("status0", gofast.statusName(0));
 
         try TEST.expectEqualStrings("priority0", gofast.priorityName(0));
         try TEST.expectEqualStrings("priority1", gofast.priorityName(1));
-        try TEST.expectEqual(2, gofast.name_priorities.items.len);
+        try TEST.expectEqual(2, gofast.names.priorities.items.len);
 
-        try TEST.expectEqual(3, gofast.name_types.items.len);
+        try TEST.expectEqual(3, gofast.names.types.items.len);
         try TEST.expectEqualStrings("type0", gofast.typeName(0));
         try TEST.expectEqualStrings("type1", gofast.typeName(1));
         try TEST.expectEqualStrings("type2", gofast.typeName(2));
 
-        try TEST.expectEqual(2, gofast.name_people.items.len);
+        try TEST.expectEqual(2, gofast.names.people.items.len);
         try TEST.expectEqualStrings("Bozhidar", gofast.personName(0));
         try TEST.expectEqualStrings("Stoyanov", gofast.personName(1));
 
         try TEST.expectEqual(3, gofast.tickets.len);
-        try TEST.expectEqual(5, gofast.ticket_time_spent.len);
+        try TEST.expectEqual(5, gofast.time_spent.len);
 
         const person1 = 0;
         const person2 = 1;
@@ -1230,27 +1286,27 @@ test "Gofast.persistance" {
         }
         // time spent
         {
-            const time_spent0 = gofast.ticket_time_spent.get(0);
+            const time_spent0 = gofast.time_spent.get(0);
             try TEST.expectEqual(person1, time_spent0.person);
             try TEST.expectEqual(ticket1, time_spent0.ticket);
             try TEST.expectEqual(300, time_spent0.time.estimate);
             try TEST.expectEqual(6000, time_spent0.time.spent);
-            const time_spent1 = gofast.ticket_time_spent.get(1);
+            const time_spent1 = gofast.time_spent.get(1);
             try TEST.expectEqual(person2, time_spent1.person);
             try TEST.expectEqual(ticket1, time_spent1.ticket);
             try TEST.expectEqual(350, time_spent1.time.estimate);
             try TEST.expectEqual(0, time_spent1.time.spent);
-            const time_spent2 = gofast.ticket_time_spent.get(2);
+            const time_spent2 = gofast.time_spent.get(2);
             try TEST.expectEqual(person2, time_spent2.person);
             try TEST.expectEqual(ticket3, time_spent2.ticket);
             try TEST.expectEqual(1200, time_spent2.time.estimate);
             try TEST.expectEqual(0, time_spent2.time.spent);
-            const time_spent3 = gofast.ticket_time_spent.get(3);
+            const time_spent3 = gofast.time_spent.get(3);
             try TEST.expectEqual(person2, time_spent3.person);
             try TEST.expectEqual(ticket2, time_spent3.ticket);
             try TEST.expectEqual(0, time_spent3.time.estimate);
             try TEST.expectEqual(600, time_spent3.time.spent);
-            const time_spent4 = gofast.ticket_time_spent.get(4);
+            const time_spent4 = gofast.time_spent.get(4);
             try TEST.expectEqual(person1, time_spent4.person);
             try TEST.expectEqual(ticket3, time_spent4.ticket);
             try TEST.expectEqual(0, time_spent4.time.estimate);
@@ -1271,7 +1327,7 @@ test "Gofast.update.order" {
     const person1 = try gofast.createPerson(.{ .name = "Bozhidar" });
     const person2 = try gofast.createPerson(.{ .name = "Stoyanov" });
 
-    const ticket1 = try gofast.createTicket(person1, .{
+    const ticket1 = try gofast.createTicket(person1, Gofast.timestamp(), .{
         .title = "Test ticket 1",
         .description = "Test description 1",
     });
@@ -1303,8 +1359,9 @@ test "Gofast.ticketstore" {
     defer store.deinit();
 
     const person1 = try store.createPerson(.{ .name = "p0" });
+    const now = Gofast.timestamp();
 
-    const k1 = try store.createTicket(person1, .{
+    const k1 = try store.createTicket(person1, now, .{
         .title = "T1",
         .description = "D1",
         .parent = null,
@@ -1312,7 +1369,7 @@ test "Gofast.ticketstore" {
         .type_ = 0,
         .priority = 0,
     });
-    const k2 = try store.createTicket(person1, .{
+    const k2 = try store.createTicket(person1, now, .{
         .title = "T2",
         .description = "D2",
         .parent = null,
@@ -1320,7 +1377,7 @@ test "Gofast.ticketstore" {
         .type_ = 0,
         .priority = 0,
     });
-    const k3 = try store.createTicket(person1, .{
+    const k3 = try store.createTicket(person1, now, .{
         .title = "T3",
         .description = "D3",
         .parent = null,
@@ -1328,7 +1385,7 @@ test "Gofast.ticketstore" {
         .type_ = 0,
         .priority = 0,
     });
-    const k4 = try store.createTicket(person1, .{
+    const k4 = try store.createTicket(person1, now, .{
         .title = "T4",
         .description = "D4",
         .parent = null,
@@ -1336,7 +1393,7 @@ test "Gofast.ticketstore" {
         .type_ = 0,
         .priority = 0,
     });
-    const k5 = try store.createTicket(person1, .{
+    const k5 = try store.createTicket(person1, now, .{
         .title = "T5",
         .description = "D5",
         .parent = null,
@@ -1351,7 +1408,7 @@ test "Gofast.ticketstore" {
     try TEST.expect(k5 == 5);
 
     // Setting a parent directly.
-    const k6 = try store.createTicket(person1, .{
+    const k6 = try store.createTicket(person1, now, .{
         .title = "T6",
         .description = "D6",
         .parent = k1,
@@ -1380,7 +1437,7 @@ test "Gofast.ticketstore" {
     try store.connectFromTo(k1, k2);
 
     // Add another child and remove the parent
-    const k7 = try store.createTicket(person1, .{
+    const k7 = try store.createTicket(person1, now, .{
         .title = "T7",
         .description = "D7",
         .parent = k1,

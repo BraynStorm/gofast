@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const assert = std.debug.assert;
 
 const httpz = @import("httpz");
 
@@ -22,10 +23,10 @@ pub const std_options = .{
 var ALLOC: Allocator = undefined;
 
 fn init_gofast(gf: *Gofast) !void {
-    if (gf.max_ticket_key == 0 and gf.name_priorities.items.len == 0) {
+    if (gf.max_ticket_key == 0 and gf.names.priorities.items.len == 0) {
         std.log.info("Initializing Gofast from scratch.", .{});
         const alloc = gf.alloc;
-        try gf.name_priorities.appendSlice(alloc, &[_]SString{
+        try gf.names.priorities.appendSlice(alloc, &[_]SString{
             try SString.fromSlice(alloc, "Immediate"),
             try SString.fromSlice(alloc, "Very Very High"),
             try SString.fromSlice(alloc, "Very High"),
@@ -35,13 +36,13 @@ fn init_gofast(gf: *Gofast) !void {
             try SString.fromSlice(alloc, "Tweak"),
             try SString.fromSlice(alloc, "Negligable"),
         });
-        try gf.name_types.appendSlice(alloc, &[_]SString{
+        try gf.names.types.appendSlice(alloc, &[_]SString{
             try SString.fromSlice(alloc, "Task"),
             try SString.fromSlice(alloc, "Bug"),
             try SString.fromSlice(alloc, "Feature"),
             try SString.fromSlice(alloc, "Milestone"),
         });
-        try gf.name_statuses.appendSlice(alloc, &[_]SString{
+        try gf.names.statuses.appendSlice(alloc, &[_]SString{
             try SString.fromSlice(alloc, "To Do"),
             try SString.fromSlice(alloc, "In Progress"),
             try SString.fromSlice(alloc, "Done"),
@@ -60,7 +61,7 @@ pub fn main() !void {
 
     const Config = struct {
         persist: []const u8,
-        port: u16 = 22000,
+        port: u16 = 20000,
     };
 
     var config = Config{
@@ -122,7 +123,7 @@ pub fn main() !void {
     simpleStaticFiles(router, "/static/*", "static");
 
     router.get("/api/tickets", apiGetTickets, .{});
-    router.post("/api/init", apiGetInit, .{});
+    router.get("/api/init", apiGetInit, .{});
     router.post("/api/tickets", apiPostTicket, .{});
     router.delete("/api/ticket/:key", apiDeleteTicket, .{});
     router.patch("/api/ticket/:key", apiPatchTicket, .{});
@@ -138,7 +139,7 @@ pub fn main() !void {
 
 fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime relative_path: StrLiteral) void {
     // Invalid path...
-    comptime std.debug.assert(relative_path[relative_path.len - 1] != '.');
+    comptime assert(relative_path[relative_path.len - 1] != '.');
 
     router.get(endpoint, struct {
         /// Go over the path and verify that there are not ".." string in it.
@@ -282,14 +283,17 @@ fn apiGetInit(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void 
     const len = tickets.len;
 
     std.log.info("GET  /api/init", .{});
-    const name_priorities = try sstringArrayToStringArray(alloc, gofast.name_priorities.items);
+    const name_priorities = try sstringArrayToStringArray(alloc, gofast.names.priorities.items);
     defer alloc.free(name_priorities);
 
-    const name_types = try sstringArrayToStringArray(alloc, gofast.name_types.items);
+    const name_types = try sstringArrayToStringArray(alloc, gofast.names.types.items);
     defer alloc.free(name_types);
 
-    const name_statuses = try sstringArrayToStringArray(alloc, gofast.name_statuses.items);
+    const name_statuses = try sstringArrayToStringArray(alloc, gofast.names.statuses.items);
     defer alloc.free(name_statuses);
+
+    const name_people = try sstringArrayToStringArray(alloc, gofast.names.people.items);
+    defer alloc.free(name_people);
 
     gofast.lock.lockShared();
     defer gofast.lock.unlockShared();
@@ -299,9 +303,12 @@ fn apiGetInit(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void 
         .count = len,
         .max_key = gofast.max_ticket_key,
         // static arrays
-        .name_types = name_types,
-        .name_priorities = name_priorities,
-        .name_statuses = name_statuses,
+        .names = .{
+            .types = name_types,
+            .priorities = name_priorities,
+            .statuses = name_statuses,
+            .people = name_people,
+        },
     }, .{ .whitespace = .minified });
     res.status = 200;
     _ = req;
@@ -314,7 +321,7 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
 
     const alloc = ALLOC;
     const tickets = &gofast.tickets;
-    const time_spent = gofast.ticket_time_spent;
+    const time_spent = gofast.time_spent;
     const ticket_slice = tickets.slice();
     const time_spent_slice = time_spent.slice();
     const len = tickets.len;
@@ -342,28 +349,28 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
         orders[i] = d.order;
     }
 
-    const name_priorities = try sstringArrayToStringArray(alloc, gofast.name_priorities.items);
+    const name_priorities = try sstringArrayToStringArray(alloc, gofast.names.priorities.items);
     defer alloc.free(name_priorities);
 
-    const name_types = try sstringArrayToStringArray(alloc, gofast.name_types.items);
+    const name_types = try sstringArrayToStringArray(alloc, gofast.names.types.items);
     defer alloc.free(name_types);
 
-    const name_statuses = try sstringArrayToStringArray(alloc, gofast.name_statuses.items);
+    const name_statuses = try sstringArrayToStringArray(alloc, gofast.names.statuses.items);
     defer alloc.free(name_statuses);
 
-    const name_people = try sstringArrayToStringArray(alloc, gofast.name_people.items);
+    const name_people = try sstringArrayToStringArray(alloc, gofast.names.people.items);
     defer alloc.free(name_people);
 
-    var t_estimated = try alloc.alloc(Gofast.TimeSpent.Seconds, time_spent.len);
+    var t_estimated = try alloc.alloc(Gofast.TicketTime.Seconds, time_spent.len);
     defer alloc.free(t_estimated);
-    var t_spent = try alloc.alloc(Gofast.TimeSpent.Seconds, time_spent.len);
+    var t_spent = try alloc.alloc(Gofast.TicketTime.Seconds, time_spent.len);
     defer alloc.free(t_spent);
     for (time_spent_slice.items(.time), 0..) |tt, i| {
         t_estimated[i] = tt.estimate;
         t_spent[i] = tt.spent;
     }
 
-    // comptime std.debug.assert(@sizeOf(Ticket.Details) == @sizeOf(u64));
+    // comptime assert(@sizeOf(Ticket.Details) == @sizeOf(u64));
 
     {
         gofast.lock.lockShared();
@@ -373,11 +380,12 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
             // single items
             .count = len,
             .max_key = gofast.max_ticket_key,
-            // static arrays
-            .name_types = name_types,
-            .name_priorities = name_priorities,
-            .name_statuses = name_statuses,
-            .name_people = name_people,
+            .names = .{
+                .types = name_types,
+                .priorities = name_priorities,
+                .statuses = name_statuses,
+                .people = name_people,
+            },
             // arrays
             .tickets = .{
                 // .details = @as([*]u64, @ptrCast(ticket_slice.items(.details).ptr))[0..len],
@@ -453,6 +461,7 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
             break :blk try gofast.createTicket(
                 // TODO: Add authentication
                 0,
+                Gofast.timestamp(),
                 .{
                     .title = title,
                     .description = description,
