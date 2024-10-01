@@ -390,6 +390,7 @@ test "Gofast.persistance" {
             .title = "Test ticket 3",
             .description = "Test description 3",
             .creator = person1,
+            .parent = ticket1,
         });
 
         ticket_create_date[0] = gofast.tickets.tickets.items(.created_on)[0];
@@ -472,6 +473,8 @@ test "Gofast.persistance" {
         try TEST.expectEqual(ticket_create_date[0], gofast.tickets.tickets.items(.last_updated_on)[0]);
         try TEST.expectEqual(ticket_create_date[1], gofast.tickets.tickets.items(.last_updated_on)[1]);
         try TEST.expectEqual(ticket_create_date[2], gofast.tickets.tickets.items(.last_updated_on)[2]);
+
+        try TEST.expectEqual(1, gofast.tickets.tickets.items(.parent)[2].?);
 
         try TEST.expectEqual(person1, gofast.tickets.tickets.items(.creator)[0]);
         try TEST.expectEqual(person2, gofast.tickets.tickets.items(.creator)[1]);

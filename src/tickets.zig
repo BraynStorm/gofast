@@ -259,7 +259,17 @@ pub const TicketStore = struct {
                     }
                     for (self.graph_children.items(.to)) |*to| {
                         for (0..Ticket.FatLink.To.capacity) |i| {
+                            if (to.items[i] == 0) break;
                             to.*.items[i] = try reader.readInt(u32, .little);
+                        }
+                    }
+
+                    // Actually set the .parent field.
+                    for (self.graph_children.items(.from), self.graph_children.items(.to)) |from, to| {
+                        for (0..Ticket.FatLink.To.capacity) |i| {
+                            if (to.items[i] == 0) break;
+                            const parent_key = try self.findIndex(to.items[i]);
+                            parents[parent_key] = from;
                         }
                     }
                 },
