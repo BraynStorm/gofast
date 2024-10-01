@@ -707,22 +707,6 @@ div.modal {
       }
     }
 
-    & .CodeMirror {
-      border: 1px solid $c6;
-      border-radius: $round;
-      border-top-right-radius: 0;
-    }
-
-    /* Show the line-numbers with an exact width */
-    & .CodeMirror-linenumbers {
-      width: $lineNumberWidth;
-    }
-
-    /* Make the placeholder italic */
-    & .CodeMirror-empty {
-      font-style: italic;
-    }
-
     &>div.icon-selectors {
       display: flex;
       justify-content: space-evenly;
