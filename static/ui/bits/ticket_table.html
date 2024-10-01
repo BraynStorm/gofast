@@ -51,6 +51,23 @@
     </template>
   </div>
   <button class="btn-plus" @click="m_nt.show = true"></button>
+  <div>
+    <div class="icon-grid">
+      <div @click="
+        if(!(m_table.highlight_key > 0))
+          alert('Must select a ticket to see its child graph');
+        else 
+          graph.show = !graph.show;
+        "
+        :class="graph.show ? 'selected' : ''"><span>Graph</span></div>
+    </div>
+    <div class="icon-grid">
+      <div @click="graph.mode = 'time_left'"
+        :class="graph.mode === 'time_left' ? 'selected' : ''"><span>TL</span></div>
+      <div @click="graph.mode = 'estimated'"
+        :class="graph.mode === 'estimated' ? 'selected' : ''"><span>E</span></div>
+    </div>
+  </div>
 </div>
 
 <div class="ticket-table">

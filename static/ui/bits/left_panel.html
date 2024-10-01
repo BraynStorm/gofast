@@ -1,4 +1,4 @@
-<aside class="left edit" x-show="left_panel.mode === 'edit'"
+<aside class="left edit" x-show="left_panel.mode === 'edit'" style="max-width:150px"
   x-transition:enter="enter"
   x-transition:enter-end="enterend"
   x-transition:enter-start="enterstart"
@@ -14,6 +14,8 @@
   </div>
   <span>Edit:</span>
   <span x-text="display_key(m_et.key)" class="et_key"></span>
+  <span>Children:</span>
+  <span x-text="direct_children(m_et.key)" class="et_children"></span>
   <input type="text" class="title" name="et_title" x-model="m_et.title" />
   <div>
     <!-- Selectors for Type, Priority and Status -->

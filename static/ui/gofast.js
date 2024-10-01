@@ -74,6 +74,10 @@ document.addEventListener("alpine:init", () => {
             type: [],
             status: [],
         },
+        graph: {
+            show: false,
+            mode: 'time_left',
+        },
 
         max_key: 0,
 
@@ -97,7 +101,7 @@ document.addEventListener("alpine:init", () => {
             show: false,
             title: "",
             description: "",
-            maybe_parent: null,
+            parent: null,
             type: 0,
             status: 0,
             priority: 0,
@@ -225,7 +229,7 @@ document.addEventListener("alpine:init", () => {
             this.create_ticket(
                 this.m_nt.title,
                 this.m_nt.description,
-                this.m_nt.maybe_parent,
+                this.m_nt.parent,
                 this.m_nt.type,
                 this.m_nt.status,
                 this.m_nt.priority,
@@ -300,8 +304,7 @@ document.addEventListener("alpine:init", () => {
                 }
             );
 
-            // const result = Object.fromEntries(entries);
-            return entries.map(([k, t]) => [parseInt(k), t]);
+            return entries;
         },
         /**
          * Called with the ticket key that has been manually reordered ("sorted")
@@ -503,6 +506,210 @@ document.addEventListener("alpine:init", () => {
             this.$nextTick(() => {
                 this.m_et = { ... this.tickets[key] };
             })
+            this.graph_draw_ticket_children(key);
+        },
+        direct_children(key) {
+            const tickets = this.tickets;
+            const children = [];
+            for (const child_key in tickets) {
+                if (tickets[child_key].parent === key)
+                    children.push(child_key);
+            }
+            return children;
+        },
+        all_children() {
+            const tickets = this.tickets;
+            const graph_children = {};
+            for (const ticket_key in tickets) {
+                graph_children[ticket_key] = [];
+            }
+            for (const ticket_key in tickets) {
+                const ticket = tickets[ticket_key];
+                if (ticket.parent !== null)
+                    graph_children[ticket.parent].push(ticket_key);
+            }
+            return graph_children;
+        },
+        ticket_subgraph(key, include_my_parents) {
+            const all = this.all_children();
+            const subgraph = {};
+
+            let not_expanded = [key];
+            while (not_expanded.length > 0) {
+                const buffer = [];
+                for (const key of not_expanded) {
+                    const children = all[key];
+                    buffer.push(...children);
+                    subgraph[key] = children;
+                }
+                not_expanded = buffer;
+            }
+
+            /* Include my parents and grand-parents but don't include their
+            other children. */
+            if (include_my_parents) {
+                const tickets = this.tickets;
+                let child = key;
+                let parent = tickets[child].parent;
+                while (parent !== null) {
+                    subgraph[parent] = [child];
+                    child = parent;
+                    parent = tickets[parent].parent;
+                }
+                // Return the grandparent as a second value.
+                return [subgraph, child];
+            } else {
+                return subgraph;
+            }
+
+        },
+        graph_draw_ticket_children(ticket) {
+            /*
+            Provides an object with keys = parent, values = array of children,
+            Contains only keys!
+            */
+            const subgraph = this.ticket_subgraph(ticket, false);
+            const tickets = Alpine.raw(this.tickets);
+            const compute_progress = x => this.progress(x);
+
+            let progress = {};
+            function ticket_progress(key) {
+                if (!(key in progress)) {
+                    const children = subgraph[key];
+                    let my_progress = compute_progress(key);
+                    for (let child_index in children) {
+                        const child_progress = ticket_progress(children[child_index]);
+                        my_progress.spent += child_progress.spent;
+                        my_progress.estimate += child_progress.estimate;
+                    }
+                    progress[key] = my_progress;
+                    return my_progress;
+                } else {
+                    return progress[key];
+                }
+            }
+
+            function key_to_ticket(key) {
+                const children = subgraph[key].map(key_to_ticket)
+                let ticket = {
+                    ticket: tickets[key],
+                    progress: ticket_progress(key),
+                };
+                if (children.length > 0) {
+                    ticket.children = children;
+                }
+                return ticket;
+            }
+
+            let data = key_to_ticket(ticket);
+            if (!data.children) {
+                data.children = [];
+            }
+            DEBUG(data)
+
+
+            // Specify the chart’s dimensions.
+            const width = container.clientWidth;
+            const height = 300;
+            const visible = 5;
+
+            // Create the color scale.
+            const color = d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, data.children.length + 1));
+
+            // Compute the layout.
+            const hierarchy = d3.hierarchy(data)
+                .sum(d => {
+                    // d.progress.spent - d.progress.estimate
+                    const p = ticket_progress(d.ticket.key);
+                    DEBUG(d.ticket.key, p.estimate, p.spent)
+                    return Math.max(0, p.estimate - p.spent);
+                })
+                .sort((a, b) => b.height - a.height || b.value - a.value);
+            const root = d3.partition()
+                .size([height, (hierarchy.height + 1) * width / visible])
+                (hierarchy);
+
+            // Create the SVG container.
+            const svg = d3.create("svg")
+                .attr("viewBox", [0, 0, width, height])
+                .attr("width", width)
+                .attr("height", height)
+                .attr("style", "max-width: 100%; height: auto; font: 10px sans-serif;");
+
+            // Append cells.
+            const cell = svg
+                .selectAll("g")
+                .data(root.descendants())
+                .join("g")
+                .attr("transform", d => `translate(${d.y0},${d.x0})`);
+
+            const rect = cell.append("rect")
+                .attr("width", d => d.y1 - d.y0 - 1)
+                .attr("height", d => rectHeight(d))
+                .attr("fill-opacity", 0.6)
+                .attr("fill", d => {
+                    if (!d.depth) return "#ccc";
+                    while (d.depth > 1) d = d.parent;
+                    return color(d.data.name);
+                })
+                .style("cursor", "pointer")
+                .on("click", clicked);
+
+            const text = cell.append("text")
+                .style("user-select", "none")
+                .attr("pointer-events", "none")
+                .attr("x", 4)
+                .attr("y", 13)
+                .attr("fill-opacity", d => +labelVisible(d));
+
+            text.append("tspan")
+                .attr("x", 4)
+                .attr("y", 13)
+                .text(d => this.display_key(d.data.ticket.key))
+            text.append("tspan")
+                .attr("x", 4)
+                .attr("y", 13 * 2)
+                .text(d => (d.data.ticket.title.substring(0, 20) + '...'))
+
+            const format = fmt_time
+            const tspan = text.append("tspan")
+                .attr("x", 4)
+                .attr("y", 13 * 3)
+                .attr("fill-opacity", d => labelVisible(d) * 0.7)
+                .text(d => ` ${format(d.value)}`);
+
+            cell.append("title")
+                .text(d => `${d.ancestors().map(d => this.display_key(d.data.ticket.key)).reverse().join("/")}\n${format(d.value)}`);
+
+            // On click, change the focus and transitions it into view.
+            let focus = root;
+            function clicked(event, p) {
+                focus = focus === p ? p = p.parent : p;
+
+                root.each(d => d.target = {
+                    x0: (d.x0 - p.x0) / (p.x1 - p.x0) * height,
+                    x1: (d.x1 - p.x0) / (p.x1 - p.x0) * height,
+                    y0: d.y0 - p.y0,
+                    y1: d.y1 - p.y0
+                });
+
+                const t = cell.transition().duration(750)
+                    .attr("transform", d => `translate(${d.target.y0},${d.target.x0})`);
+
+                rect.transition(t).attr("height", d => rectHeight(d.target));
+                text.transition(t).attr("fill-opacity", d => +labelVisible(d.target));
+                tspan.transition(t).attr("fill-opacity", d => labelVisible(d.target) * 0.7);
+            }
+
+            function rectHeight(d) {
+                return d.x1 - d.x0 - Math.min(1, (d.x1 - d.x0) / 2);
+            }
+
+            function labelVisible(d) {
+                return d.y1 <= width && d.y0 >= 0 && d.x1 - d.x0 > 16;
+            }
+
+            container.replaceChildren(svg.node());
         },
         stop_edit_ticket(save) {
             if (this.left_panel.mode === 'edit') this.left_panel.mode = '';
@@ -607,5 +814,10 @@ document.addEventListener("alpine:init", () => {
             }
             return { spent: ticket_spent, estimate: ticket_estimate };
         },
+        progress_pct(key) {
+            const p = this.progress(key);
+            if (p.estimate == 0) return 0;
+            return p.spent / p.estimate;
+        }
     }));
 });
