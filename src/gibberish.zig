@@ -1,8 +1,7 @@
 const std = @import("std");
 const Gofast = @import("gofast.zig").Gofast;
+const Ticket = Gofast.Ticket;
 const SString = @import("smallstring.zig").ShortString;
-const Tickets = @import("tickets.zig");
-const Ticket = Tickets.Ticket;
 
 const Allocator = std.mem.Allocator;
 
@@ -123,7 +122,7 @@ fn RandomStringGen(o: RandomStringGenOptions) type {
 /// Naive child recursive searcher.
 fn isChildRecursive(
     alloc: Allocator,
-    tickets: *Tickets.TicketStore,
+    gofast: *Gofast,
     me: Ticket.Key,
     needle: Ticket.Key,
 ) bool {
@@ -132,7 +131,7 @@ fn isChildRecursive(
     //  but this is much easier to implement right now, as I don't have a good
     //  way of accessing JUST the children, and have to manually walk the
     //  MultiArrayList... Later I will fix this.
-    const children = tickets.childrenAlloc(me, alloc, 4) catch unreachable;
+    const children = gofast.childrenAlloc(me, alloc, 4) catch unreachable;
     defer alloc.free(children);
 
     // Do I even HAVE children?
@@ -143,7 +142,7 @@ fn isChildRecursive(
 
     // Okay, is it a grand-child?
     for (children) |child| {
-        if (isChildRecursive(alloc, tickets, child, needle)) {
+        if (isChildRecursive(alloc, gofast, child, needle)) {
             return true;
         }
     }
@@ -171,30 +170,30 @@ pub fn initGiberish(
     _ = try gofast.createPerson(.{ .name = "Bozhidar Stoyanov" });
     _ = try gofast.createPerson(.{ .name = "Kaloyan Mitev" });
 
-    try gofast.tickets.tickets.ensureTotalCapacity(gofast.tickets.alloc, n_tickets);
+    try gofast.tickets.ensureTotalCapacity(gofast.alloc, n_tickets);
 
     const years_2 = 365 * std.time.ms_per_day;
     const now_end = Gofast.timestamp();
     const now_start = now_end - years_2;
 
     for (0..n_tickets) |_| {
-        const max_type: Ticket.Type = @intCast(gofast.tickets.name_types.items.len - 1);
-        const max_priority: Ticket.Priority = @intCast(gofast.tickets.name_priorities.items.len - 1);
-        const max_status: Ticket.Status = @intCast(gofast.tickets.name_statuses.items.len - 1);
-        const max_person: Ticket.Person = @intCast(gofast.tickets.name_people.items.len - 1);
+        const max_type: Gofast.Ticket.Type = @intCast(gofast.name_types.items.len - 1);
+        const max_priority: Gofast.Ticket.Priority = @intCast(gofast.name_priorities.items.len - 1);
+        const max_status: Gofast.Ticket.Status = @intCast(gofast.name_statuses.items.len - 1);
+        const max_person: Gofast.Person = @intCast(gofast.name_people.items.len - 1);
 
         const rand_title = try title_gen.generateWords(random, alloc);
         const rand_desc = try description_gen.generateWords(random, alloc);
 
-        const rand_type = std.rand.intRangeAtMost(random, Ticket.Type, 0, max_type);
-        const rand_priority = std.rand.intRangeAtMost(random, Ticket.Priority, 0, max_priority);
-        const rand_status = std.rand.intRangeAtMost(random, Ticket.Status, 0, max_status);
-        const rand_creator = std.rand.intRangeAtMost(random, Ticket.Person, 0, max_person);
+        const rand_type = std.rand.intRangeAtMost(random, Gofast.Ticket.Type, 0, max_type);
+        const rand_priority = std.rand.intRangeAtMost(random, Gofast.Ticket.Priority, 0, max_priority);
+        const rand_status = std.rand.intRangeAtMost(random, Gofast.Ticket.Status, 0, max_status);
+        const rand_creator = std.rand.intRangeAtMost(random, Gofast.Person, 0, max_person);
 
         const rand_create = std.rand.intRangeAtMost(random, i64, now_start, now_end);
         const rand_update = std.rand.intRangeAtMost(random, i64, rand_create, now_end);
 
-        _ = gofast.tickets.addTicket(.{
+        _ = gofast.addTicket(.{
             .title = rand_title,
             .description = rand_desc,
             .parent = null,
@@ -214,7 +213,7 @@ pub fn initGiberish(
     //  This can produce cycles,
 
     for (0..n_tickets) |me_usize| {
-        if (std.rand.int(random, u8) <= (255 / 3)) {
+        if (std.rand.int(random, u8) <= (180)) {
             const me: Ticket.Key = @intCast(1 + me_usize);
             while (true) {
                 const parent = std.rand.intRangeAtMost(random, Ticket.Key, 1, n_tickets);
@@ -223,10 +222,10 @@ pub fn initGiberish(
                 if (parent == me) continue;
 
                 // Is my parent my child/grandchild (cursed)?
-                if (isChildRecursive(alloc, &gofast.tickets, me, parent)) continue;
+                if (isChildRecursive(alloc, gofast, me, parent)) continue;
 
                 // Okay, we can safely set this ticket as my  parent.
-                try gofast.tickets.setParent(me, parent);
+                try gofast.setParent(me, parent);
                 break;
             }
         }
@@ -235,19 +234,19 @@ pub fn initGiberish(
     for (0..n_tickets) |ticket_i| {
         if (std.rand.int(random, u8) <= (255 / 2)) {
             const key: Ticket.Key = @intCast(1 + ticket_i);
-            const person: Ticket.Person = std.rand.intRangeAtMost(
+            const person: Gofast.Person = std.rand.intRangeAtMost(
                 random,
-                Ticket.Person,
+                Gofast.Person,
                 1,
                 n_people,
             );
 
             // Generate them in minutes so we don't have to deal with seconds
-            const estimated = std.rand.intRangeAtMost(random, Ticket.TimeSpent.Seconds, 1, 60 * 60) * 60;
-            const worktime = std.rand.intRangeAtMost(random, Ticket.TimeSpent.Seconds, 1, 60 * 60) * 60;
+            const estimated = std.rand.intRangeAtMost(random, Gofast.TimeSpent.Seconds, 1, 60 * 60) * 60;
+            const worktime = std.rand.intRangeAtMost(random, Gofast.TimeSpent.Seconds, 1, 60 * 60) * 60;
             const time_started = std.rand.intRangeAtMost(random, i64, 1727000000, std.time.timestamp());
 
-            try gofast.giveEstimate(key, person, estimated);
+            try gofast.setEstimate(key, person, estimated);
             try gofast.logWork(key, person, time_started, time_started + worktime);
         }
     }
