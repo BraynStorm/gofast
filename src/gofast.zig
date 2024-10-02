@@ -3,6 +3,8 @@ const assert = std.debug.assert;
 const SString = @import("smallstring.zig").ShortString;
 const SIMDArray = @import("simdarray.zig").SIMDSentinelArray;
 
+const V0 = @import("gofast_v0.zig");
+
 const Allocator = std.mem.Allocator;
 
 const log = std.log.scoped(.Gofast);
@@ -110,7 +112,7 @@ pub const Gofast = struct {
             to: To = undefined,
             from: Key,
 
-            const To = SIMDArray(Key, null, 0);
+            pub const To = SIMDArray(Key, null, 0);
 
             pub fn init(from: Key) FatLink {
                 return FatLink{
@@ -162,7 +164,7 @@ pub const Gofast = struct {
 
         const cwd = std.fs.cwd();
         if (persitence) |p| {
-            var load = true;
+            var load_from_file = true;
             const file = cwd.openFile(p, .{ .mode = .read_write }) catch |e| blk: {
                 log.info("Failed to open {s} ({}), creating...", .{ p, e });
                 const f = try cwd.createFile(p, .{
@@ -170,19 +172,19 @@ pub const Gofast = struct {
                     .exclusive = true,
                     .read = true,
                 });
-                load = false;
+                load_from_file = false;
                 break :blk f;
             };
 
-            if (load) {
+            g.persistance = file;
+            if (load_from_file) {
                 log.info("Loading data from persistance {s}", .{p});
-                try g.loadFromFile(file.reader());
+                try g.load(file.reader());
+                g.compactChildrenGraph();
             } else {
-                g.persistance = file;
                 // Save it so it's not empty the next time.
                 try g.save();
             }
-            g.persistance = file;
         }
 
         return g;
@@ -204,10 +206,10 @@ pub const Gofast = struct {
             descriptions[i].deinit(alloc);
         }
         self.time_spent.deinit(alloc);
-        Gofast.deinit_stringmap(alloc, &self.names.statuses);
-        Gofast.deinit_stringmap(alloc, &self.names.types);
-        Gofast.deinit_stringmap(alloc, &self.names.priorities);
-        Gofast.deinit_stringmap(alloc, &self.names.people);
+        Gofast.deinitStringMap(alloc, &self.names.statuses);
+        Gofast.deinitStringMap(alloc, &self.names.types);
+        Gofast.deinitStringMap(alloc, &self.names.priorities);
+        Gofast.deinitStringMap(alloc, &self.names.people);
         self.history.deinit(alloc);
         self.tickets.deinit(alloc);
     }
@@ -217,7 +219,7 @@ pub const Gofast = struct {
         if (self.persistance) |p| {
             log.info(".save", .{});
             try p.seekTo(0);
-            try self.saveV0(p.writer());
+            try self.writeToFile(p.writer());
         } else {
             return error.NoPersistance;
         }
@@ -408,7 +410,7 @@ pub const Gofast = struct {
         return self.names.people.items[@intCast(p)].s;
     }
 
-    pub fn loadFromFile(self: *Self, reader: std.fs.File.Reader) !void {
+    pub fn load(self: *Self, reader: std.fs.File.Reader) !void {
         const t_start = std.time.nanoTimestamp();
         // Read the MAGIC.
         {
@@ -423,143 +425,15 @@ pub const Gofast = struct {
         // Read the version
         const version = try reader.readInt(u32, .little);
         switch (version) {
-            0 => try self.loadFromV0(reader),
+            0 => try V0.load(self, reader),
             else => return error.UnkownVersion,
         }
         const t_end = std.time.nanoTimestamp();
         const took = t_end - t_start;
         log.info("Loading took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
     }
-    fn loadStringMapV0(alloc: Allocator, reader: std.fs.File.Reader, into: *StringMap) !void {
-        const n = try reader.readInt(usize, .little);
-        try into.ensureUnusedCapacity(alloc, n);
-
-        for (0..n) |_| {
-            const len = try reader.readInt(u32, .little);
-            var ss = into.addOneAssumeCapacity();
-            ss.s = try alloc.alloc(u8, len);
-            errdefer ss.deinit(alloc);
-            try reader.readNoEof(ss.s);
-        }
-    }
-    fn loadSStringSliceV0(alloc: Allocator, reader: std.fs.File.Reader, slice: []SString) !void {
-        for (0..slice.len) |i| {
-            var ss = &slice[i];
-            const len = try reader.readInt(u32, .little);
-            // std.debug.print("loadSStringSliceV0: allocating {}\n", .{len});
-            ss.s = try alloc.alloc(u8, len);
-            errdefer ss.deinit(alloc);
-            try reader.readNoEof(ss.s[0..len]);
-            // std.debug.print("loadSStringSliceV0: [{}] len={}, content={s}>\n", .{ i, len, ss.s });
-            std.debug.print("loadSStringSliceV0: [{}] len={}\n", .{ i, len });
-        }
-    }
-    fn loadFromV0(self: *Self, reader: std.fs.File.Reader) !void {
-        try Self.loadStringMapV0(self.alloc, reader, &self.names.types);
-        log.info("loadFromV0: Loaded {} types", .{self.names.types.items.len});
-
-        try Self.loadStringMapV0(self.alloc, reader, &self.names.priorities);
-        log.info("loadFromV0: Loaded {} priorities", .{self.names.priorities.items.len});
-
-        try Self.loadStringMapV0(self.alloc, reader, &self.names.statuses);
-        log.info("loadFromV0: Loaded {} statuses", .{self.names.statuses.items.len});
-
-        try Self.loadStringMapV0(self.alloc, reader, &self.names.people);
-        log.info("loadFromV0: Loaded {} people", .{self.names.people.items.len});
-
-        const max_key = try reader.readInt(u32, .little);
-        log.info("loadFromV0: max_key={}", .{max_key});
-        const n_tickets = try reader.readInt(u32, .little);
-        log.info("loadFromV0: n_tickets={}", .{n_tickets});
-
-        self.max_ticket_key = max_key;
-
-        // Early break
-        if (n_tickets == 0) {
-            return;
-        }
-
-        // Now load the MultiArrayList slice-by-slice.
-        try self.tickets.resize(self.alloc, n_tickets);
-        var allslice = self.tickets.slice();
-
-        for (allslice.items(.key)) |*i| i.* = try reader.readInt(u32, .little);
-        for (allslice.items(.details)) |*i| {
-            i.type = try reader.readInt(u8, .little);
-            i.status = try reader.readInt(u8, .little);
-            i.priority = try reader.readInt(u8, .little);
-            comptime assert(@sizeOf(u32) == @sizeOf(Ticket.Order));
-            i.order = @bitCast(try reader.readInt(u32, .little));
-        }
-        for (allslice.items(.creator)) |*i| i.* = try reader.readInt(u32, .little);
-        for (allslice.items(.created_on)) |*i| i.* = try reader.readInt(i64, .little);
-        for (allslice.items(.last_updated_by)) |*i| i.* = try reader.readInt(u32, .little);
-        for (allslice.items(.last_updated_on)) |*i| i.* = try reader.readInt(i64, .little);
-
-        // title: SString,
-        // description: SString,
-        try loadSStringSliceV0(self.alloc, reader, allslice.items(.title));
-        try loadSStringSliceV0(self.alloc, reader, allslice.items(.description));
-
-        // parent: ?Key = null,
-        const parents = allslice.items(.parent);
-        for (0..n_tickets) |i| {
-            parents[i] = null;
-        }
-        const n_graphs = try reader.readInt(usize, .little);
-        log.info("loadFromV0: n_graphs={}", .{n_graphs});
-        for (0..n_graphs) |i_graph| {
-            // Unused for now
-            _ = i_graph;
-
-            switch (try reader.readInt(u8, .little)) {
-                // Child Graph
-                0 => {
-                    log.info("loadFromV0: loading graph 0", .{});
-                    const n_graph_len = try reader.readInt(usize, .little);
-
-                    log.info("loadFromV0: n_graph_len={}", .{n_graph_len});
-                    try self.graph_children.resize(self.alloc, n_graph_len);
-                    for (self.graph_children.items(.from)) |*from| {
-                        from.* = try reader.readInt(u32, .little);
-                    }
-                    for (self.graph_children.items(.from), self.graph_children.items(.to)) |from, *to| {
-                        for (0..Ticket.FatLink.To.capacity) |i| {
-                            const parent_key = from;
-                            const child_key = try reader.readInt(u32, .little);
-                            to.*.items[i] = child_key;
-                            log.info("loadFromV0: link: {} -> {}", .{ from, child_key });
-                            if (child_key != 0) {
-                                // Actually set the .parent field.
-                                const child_index = try self.findTicketIndex(child_key);
-                                parents[child_index] = parent_key;
-                            }
-                        }
-                    }
-                    self.compact_children_graph();
-                },
-                else => return error.UnknownGraphType,
-            }
-        }
-
-        // Read ticket_time_spent
-        {
-            const n_time_spent = try reader.readInt(usize, .little);
-            try self.time_spent.resize(self.alloc, n_time_spent);
-            const time_spent_slice = self.time_spent.slice();
-
-            const ts_people = time_spent_slice.items(.person);
-            const ts_time = time_spent_slice.items(.time);
-            for (time_spent_slice.items(.ticket)) |*ticket| ticket.* = try reader.readInt(u32, .little);
-            for (0..n_time_spent) |i| ts_people[i] = try reader.readInt(u32, .little);
-            for (0..n_time_spent) |i| ts_time[i] = .{
-                .estimate = try reader.readInt(u32, .little),
-                .spent = try reader.readInt(u32, .little),
-            };
-        }
-    }
     /// Remove holes and combine split parents into tight(er) buckets.
-    fn compact_children_graph(self: *Self) void {
+    fn compactChildrenGraph(self: *Self) void {
         var i: usize = 0;
         const slice = self.graph_children.slice();
         const tos = slice.items(.to);
@@ -610,7 +484,7 @@ pub const Gofast = struct {
         std.log.info("compact_children_graph: sorting took {}us", .{@divTrunc((t_end_sort - t_end_compact), std.time.ns_per_us)});
     }
     // fn lessThan_GraphChildren(self: [] const , a: usize, b: usize) bool {}
-    fn deinit_stringmap(alloc: Allocator, stringmap: *StringMap) void {
+    fn deinitStringMap(alloc: Allocator, stringmap: *StringMap) void {
         var i = stringmap.items.len;
         while (i > 0) {
             i -= 1;
@@ -619,9 +493,9 @@ pub const Gofast = struct {
         stringmap.deinit(alloc);
     }
 
-    fn saveV0StringMap(writer: std.fs.File.Writer, map: *const StringMap) !void {
+    fn writeStringMap(writer: std.fs.File.Writer, map: *const StringMap) !void {
         // Length
-        try writer.writeInt(usize, map.items.len, .little);
+        try writer.writeInt(u64, map.items.len, .little);
 
         // Characters
         for (map.items) |ss| {
@@ -630,20 +504,20 @@ pub const Gofast = struct {
         }
     }
 
-    fn saveV0(self: *const Self, writer: std.fs.File.Writer) !void {
+    fn writeToFile(self: *const Self, writer: std.fs.File.Writer) !void {
         // Magic
         try writer.writeAll("GOFAST\x00");
         // Version
         try writer.writeInt(u32, 0, .little);
 
         //name_types
-        try saveV0StringMap(writer, &self.names.types);
+        try writeStringMap(writer, &self.names.types);
         //name_priorities
-        try saveV0StringMap(writer, &self.names.priorities);
+        try writeStringMap(writer, &self.names.priorities);
         //name_statuses
-        try saveV0StringMap(writer, &self.names.statuses);
+        try writeStringMap(writer, &self.names.statuses);
         //name_people
-        try saveV0StringMap(writer, &self.names.people);
+        try writeStringMap(writer, &self.names.people);
 
         //max_key
         try writer.writeInt(u32, self.max_ticket_key, .little);
@@ -684,7 +558,7 @@ pub const Gofast = struct {
 
         {
             //n_graphs
-            try writer.writeInt(usize, 1, .little);
+            try writer.writeInt(u64, 1, .little);
 
             //linktype=child
             const child = 0; // Ticket.LinkType.child
@@ -693,7 +567,7 @@ pub const Gofast = struct {
             const children = self.graph_children.slice();
 
             //n_graph_nodes
-            try writer.writeInt(usize, children.len, .little);
+            try writer.writeInt(u64, children.len, .little);
 
             for (children.items(.from)) |from| try writer.writeInt(u32, from, .little);
             for (children.items(.to)) |*to| {
@@ -706,7 +580,7 @@ pub const Gofast = struct {
         // ticket_time_spent
         {
             const ticket_time_slice = self.time_spent.slice();
-            try writer.writeInt(usize, ticket_time_slice.len, .little);
+            try writer.writeInt(u64, ticket_time_slice.len, .little);
             for (ticket_time_slice.items(.ticket)) |ticket| {
                 try writer.writeInt(u32, ticket, .little);
             }
