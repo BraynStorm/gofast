@@ -7,6 +7,10 @@
             .url = "git+https://github.com/karlseguin/http.zig?ref=zig-0.13#48573688344d592c6db7a4fe3fc35ddbc4510b40",
             .hash = "12207b5b1b9ce64a4827519bad24511a485c3ffd2496d9d79ffe8255184e35868941",
         },
+        .benchmark = .{
+            .url = "https://github.com/silversquirl/benchmark.zig/archive/2a4fbe91f6b217c3a09decad96f3376972363d3c.zip",
+            .hash = "1220287c22cfcf85f05d353084e12200c6a7dcb5f4511cb05103f5dbd709e50731a7",
+        },
     },
     .paths = .{
         "build.zig",

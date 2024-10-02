@@ -4,6 +4,7 @@ const SString = @import("smallstring.zig").ShortString;
 const SIMDArray = @import("simdarray.zig").SIMDSentinelArray;
 
 const V0 = @import("gofast_v0.zig");
+const V1 = @import("gofast_v1.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -1338,6 +1339,7 @@ test "Gofast.ticketstore" {
 }
 
 test "TicketStore.sizes" {
+    _ = V1;
     std.debug.print("@sizeOf(Ticket.Key) = {}\n", .{@sizeOf(Gofast.Ticket.Key)});
     std.debug.print("@sizeOf(Ticket.Link) = {}\n", .{@sizeOf(Gofast.Ticket.Link)});
     std.debug.print("@sizeOf(Ticket.FatLink) = {}\n", .{@sizeOf(Gofast.Ticket.FatLink)});
