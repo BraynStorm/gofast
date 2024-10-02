@@ -7,3 +7,4 @@ services:
       - ./static:/usr/share/nginx/html
     ports:
       - 22000:22000
+      - 22100:22100
