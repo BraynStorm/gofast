@@ -10,6 +10,7 @@ const SString = @import("smallstring.zig").ShortString;
 const Giberish = @import("gibberish.zig");
 
 const Allocator = std.mem.Allocator;
+const log = std.log.scoped(.http);
 const StrLiteral = []const u8;
 
 pub const std_options = .{
@@ -99,7 +100,10 @@ pub fn main() !void {
     var gofast: Gofast = undefined;
     gofast = try Gofast.init(ALLOC, config.persist);
     try init_gofast(&gofast);
-    var server = try httpz.Server(*Gofast).init(ALLOC, .{ .port = config.port }, &gofast);
+    var server = try httpz.Server(*Gofast).init(ALLOC, .{
+        .address = "0.0.0.0",
+        .port = config.port,
+    }, &gofast);
     defer {
         server.stop();
         server.deinit();
@@ -154,7 +158,7 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
                 }
             }
         }
-        fn debug(comptime log: anytype, s: anytype) void {
+        fn debug(comptime logger: anytype, s: anytype) void {
             const fields: []const std.builtin.Type.StructField = comptime std.meta.fields(@TypeOf(s));
 
             inline for (fields) |field| {
@@ -170,14 +174,12 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
                     },
                     else => "{}",
                 };
-                log.debug(field.name ++ " = " ++ fmt, .{@field(s, field.name)});
+                logger.debug(field.name ++ " = " ++ fmt, .{@field(s, field.name)});
             }
         }
         fn handler(_: *Gofast, req: *httpz.Request, res: *httpz.Response) !void {
             // Prefix, because the endpoint ends with a *, we need to strip it.
             // /static/* => /static/
-            const log = std.log.scoped(.static);
-
             const url_prefix = endpoint[0 .. endpoint.len - 1];
             // debug(log, .{ .url_prefix = url_prefix });
 
@@ -230,7 +232,7 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
             path_buf.appendSliceAssumeCapacity(relative);
             setContentType(path_buf.items, res);
 
-            std.log.info("GET {s}", .{url_path});
+            log.info("GET {s}", .{url_path});
             sendStaticFile(
                 small_alloc,
                 path_buf.items,
@@ -242,7 +244,7 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
                 },
                 std.mem.Allocator.Error.OutOfMemory => {
                     log.err(
-                        "static | Failed to allocate file buffer.\nrequested={s}\nresolved ={s}",
+                        "Failed to allocate file buffer.\nrequested={s}\nresolved ={s}",
                         .{ url_path, path_buf.items },
                     );
                     res.status = 500;
@@ -260,7 +262,7 @@ fn simpleStaticFile(router: anytype, comptime endpoint: StrLiteral, comptime fil
             setContentType(filepath, res);
             try sendStaticFile(ALLOC, filepath, res.writer(), null);
             res.status = 200;
-            std.log.info("GET  " ++ endpoint ++ " | " ++ filepath, .{});
+            log.info("GET  " ++ endpoint ++ " | " ++ filepath, .{});
         }
     }.handler, .{});
 }
@@ -282,7 +284,7 @@ fn apiGetInit(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void 
     const tickets = gofast.tickets;
     const len = tickets.len;
 
-    std.log.info("GET  /api/init", .{});
+    log.info("GET  /api/init", .{});
     const name_priorities = try sstringArrayToStringArray(alloc, gofast.names.priorities.items);
     defer alloc.free(name_priorities);
 
@@ -314,7 +316,7 @@ fn apiGetInit(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void 
     _ = req;
     const t_end = std.time.nanoTimestamp();
     const took = t_end - t_start;
-    std.log.info("apiGetInit took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
+    log.info("apiGetInit took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
 }
 fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void {
     const t_start = std.time.nanoTimestamp();
@@ -326,7 +328,7 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
     const time_spent_slice = time_spent.slice();
     const len = tickets.len;
 
-    std.log.info("GET  /api/tickets | {} ticket(s).", .{len});
+    log.info("GET  /api/tickets | {} ticket(s).", .{len});
 
     const titles = try sstringArrayToStringArray(alloc, ticket_slice.items(.title));
     defer alloc.free(titles);
@@ -419,7 +421,7 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
     _ = req;
     const t_end = std.time.nanoTimestamp();
     const took = t_end - t_start;
-    std.log.info("apiGetTickets took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
+    log.info("apiGetTickets took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
 }
 fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void {
     var maybe_json = try req.jsonObject();
@@ -449,7 +451,7 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
             return error.NoStatus;
         }).integer;
 
-        std.log.info("POST /api/tickets | title={s}, description={s}, parent={?}", .{
+        log.info("POST /api/tickets | title={s}, description={s}, parent={?}", .{
             title,
             description,
             maybe_parent,
