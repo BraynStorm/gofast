@@ -22,8 +22,9 @@
               m_table.order[pos] = tmp;
             }
             ">↑</button>
-          <!-- <button>≡</button> -->
+          <button>≡</button>
           <button @click="
+
             let pos = parseInt(m_table.order.findIndex(x => x[0] === prop));
             if (pos < m_table.order.length - 1) {
               let tmp = m_table.order[pos+1];
@@ -53,6 +54,10 @@
   <button class="btn-plus" @click="m_nt.show = true"></button>
   <div>
     <div class="icon-grid">
+      <div @click="main.mode='table'" :class="main.mode === 'table' ? 'selected' : ''"><span>View: Table</span></div>
+      <div @click="main.mode='cards'" :class="main.mode === 'cards' ? 'selected' : ''"><span>View: Cards</span></div>
+    </div>
+    <div class="icon-grid">
       <div @click="
         graph.show = !graph.show;
         if(!(m_table.highlight_key > 0)) {
@@ -72,7 +77,7 @@
   </div>
 </div>
 
-<div class="ticket-table">
+<div class="ticket-table" x-show="main.mode === 'table'">
   <table
     x-sort="ui_on_reorder_item_to($item, $position)"
     x-sort.config="{ handle : 'handle'}">
@@ -117,4 +122,23 @@
       </tr>
     </template>
   </table>
+</div>
+
+<!-- Card view -->
+<div class="cards" x-show="main.mode === 'cards'">
+  <template x-for="(status, status_id) in names.status" :key="status_id">
+    <div class="column">
+      <div class="header" x-text="status"></div>
+      <template x-for="([key, ticket]) in ui_filter_tickets()" :key="key">
+        <template x-if="ticket.status == status_id">
+          <div class="ticket card"
+          :class="m_table.highlight_key === key ? 'highlight' : ''"
+          @click="m_table.highlight_key = key;">
+            <div class="title" x-text="ticket.title"></div>
+          </div>
+        </template>
+      </template>
+      <div class="footer"></div>
+    </div>
+  </template>
 </div>

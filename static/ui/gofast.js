@@ -81,6 +81,9 @@ document.addEventListener("alpine:init", () => {
 
         max_key: 0,
 
+        main: {
+            mode: Alpine.$persist('table'),
+        },
         // Model: The ticket table.
         m_table: {
             search: {

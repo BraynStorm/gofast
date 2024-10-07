@@ -214,11 +214,11 @@ aside {
         overflow: hidden;
         border: 1px solid #888;
         background-color: #888;
-        gap:1px;
+        gap: 1px;
 
         &>div.icon-grid {
           border-radius: 0;
-          border:0;
+          border: 0;
         }
       }
     }
@@ -722,5 +722,52 @@ div.modal {
       }
     }
 
+  }
+}
+
+/* Cards */
+div.cards {
+  display: flex;
+  flex-direction: row;
+  gap: 3px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &>div.column {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid $c4;
+    border-radius: $round;
+    gap: 5px;
+    padding: 0 5px 0 5px;
+
+    &>div.header {
+      font-size: 1.5em;
+      text-align: center;
+      line-height: 2em;
+      border-bottom: 1px solid $c6;
+    }
+
+    &>div.footer {
+      border-top: 1px solid $c6;
+    }
+
+    &>div.ticket.card {
+      padding: 8px;
+      border-radius: $round;
+      box-shadow: 0 0 1px 1px rgba(0, 0, 0, 0.1);
+      user-select: none;
+
+      &.highlight { 
+      box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.4);
+        
+      }
+      &:hover {
+        background: linear-gradient(white , $c1);
+      }
+
+
+    }
   }
 }
