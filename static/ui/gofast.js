@@ -887,6 +887,12 @@ document.addEventListener("alpine:init", () => {
             const p = this.progress(key);
             if (p.estimate == 0) return 0;
             return p.spent / p.estimate;
-        }
+        },
+        ui_highlight_key(key) {
+            this.m_table.highlight_key = key;
+        },
+        class_highlighted(key) {
+            return this.m_table.highlight_key == key ? "highlight" : "";
+        },
     }));
 });
