@@ -61,7 +61,7 @@
       let content = '';
       for (let bit of bits) {
         if (Array.isArray(bit)) {
-          content += '<div class=\\fc\\>'.replace(/\\/g, String.fromCharCode(34));
+          content += '<div class=\\main\\>'.replace(/\\/g, String.fromCharCode(34));
           for (let sub_bit of bit) {
             content += await sub_bit;
           }
