@@ -18,37 +18,85 @@ fn RandomStringGen(o: RandomStringGenOptions) type {
         const Self = @This();
         const RNG = std.rand.Random;
 
+        const polish_chars = [_]struct {
+            c: u21,
+            C: u21,
+            weight: f32,
+        }{
+            .{ .c = std.unicode.utf8Decode("a") catch unreachable, .C = std.unicode.utf8Decode("A") catch unreachable, .weight = 0.837 },
+            .{ .c = std.unicode.utf8Decode("ą") catch unreachable, .C = std.unicode.utf8Decode("Ą") catch unreachable, .weight = 0.079 },
+            .{ .c = std.unicode.utf8Decode("b") catch unreachable, .C = std.unicode.utf8Decode("B") catch unreachable, .weight = 0.193 },
+            .{ .c = std.unicode.utf8Decode("c") catch unreachable, .C = std.unicode.utf8Decode("C") catch unreachable, .weight = 0.389 },
+            .{ .c = std.unicode.utf8Decode("ć") catch unreachable, .C = std.unicode.utf8Decode("Ć") catch unreachable, .weight = 0.060 },
+            .{ .c = std.unicode.utf8Decode("d") catch unreachable, .C = std.unicode.utf8Decode("D") catch unreachable, .weight = 0.335 },
+            .{ .c = std.unicode.utf8Decode("e") catch unreachable, .C = std.unicode.utf8Decode("E") catch unreachable, .weight = 0.868 },
+            .{ .c = std.unicode.utf8Decode("ę") catch unreachable, .C = std.unicode.utf8Decode("Ę") catch unreachable, .weight = 0.113 },
+            .{ .c = std.unicode.utf8Decode("f") catch unreachable, .C = std.unicode.utf8Decode("F") catch unreachable, .weight = 0.026 },
+            .{ .c = std.unicode.utf8Decode("g") catch unreachable, .C = std.unicode.utf8Decode("G") catch unreachable, .weight = 0.146 },
+            .{ .c = std.unicode.utf8Decode("h") catch unreachable, .C = std.unicode.utf8Decode("H") catch unreachable, .weight = 0.125 },
+            .{ .c = std.unicode.utf8Decode("i") catch unreachable, .C = std.unicode.utf8Decode("I") catch unreachable, .weight = 0.883 },
+            .{ .c = std.unicode.utf8Decode("j") catch unreachable, .C = std.unicode.utf8Decode("J") catch unreachable, .weight = 0.228 },
+            .{ .c = std.unicode.utf8Decode("k") catch unreachable, .C = std.unicode.utf8Decode("K") catch unreachable, .weight = 0.301 },
+            .{ .c = std.unicode.utf8Decode("l") catch unreachable, .C = std.unicode.utf8Decode("L") catch unreachable, .weight = 0.224 },
+            .{ .c = std.unicode.utf8Decode("ł") catch unreachable, .C = std.unicode.utf8Decode("Ł") catch unreachable, .weight = 0.238 },
+            .{ .c = std.unicode.utf8Decode("m") catch unreachable, .C = std.unicode.utf8Decode("M") catch unreachable, .weight = 0.281 },
+            .{ .c = std.unicode.utf8Decode("n") catch unreachable, .C = std.unicode.utf8Decode("N") catch unreachable, .weight = 0.569 },
+            .{ .c = std.unicode.utf8Decode("ń") catch unreachable, .C = std.unicode.utf8Decode("Ń") catch unreachable, .weight = 0.016 },
+            .{ .c = std.unicode.utf8Decode("o") catch unreachable, .C = std.unicode.utf8Decode("O") catch unreachable, .weight = 0.753 },
+            .{ .c = std.unicode.utf8Decode("ó") catch unreachable, .C = std.unicode.utf8Decode("Ó") catch unreachable, .weight = 0.079 },
+            .{ .c = std.unicode.utf8Decode("p") catch unreachable, .C = std.unicode.utf8Decode("P") catch unreachable, .weight = 0.287 },
+            .{ .c = std.unicode.utf8Decode("r") catch unreachable, .C = std.unicode.utf8Decode("R") catch unreachable, .weight = 0.415 },
+            .{ .c = std.unicode.utf8Decode("s") catch unreachable, .C = std.unicode.utf8Decode("S") catch unreachable, .weight = 0.413 },
+            .{ .c = std.unicode.utf8Decode("ś") catch unreachable, .C = std.unicode.utf8Decode("Ś") catch unreachable, .weight = 0.072 },
+            .{ .c = std.unicode.utf8Decode("t") catch unreachable, .C = std.unicode.utf8Decode("T") catch unreachable, .weight = 0.385 },
+            .{ .c = std.unicode.utf8Decode("u") catch unreachable, .C = std.unicode.utf8Decode("U") catch unreachable, .weight = 0.206 },
+            .{ .c = std.unicode.utf8Decode("w") catch unreachable, .C = std.unicode.utf8Decode("W") catch unreachable, .weight = 0.411 },
+            .{ .c = std.unicode.utf8Decode("y") catch unreachable, .C = std.unicode.utf8Decode("Y") catch unreachable, .weight = 0.403 },
+            .{ .c = std.unicode.utf8Decode("z") catch unreachable, .C = std.unicode.utf8Decode("Z") catch unreachable, .weight = 0.533 },
+            .{ .c = std.unicode.utf8Decode("ź") catch unreachable, .C = std.unicode.utf8Decode("Ź") catch unreachable, .weight = 0.008 },
+            .{ .c = std.unicode.utf8Decode("ż") catch unreachable, .C = std.unicode.utf8Decode("Ż") catch unreachable, .weight = 0.093 },
+        };
+
+        var weight_sum = blk: {
+            var sum: f32 = 0;
+            for (polish_chars) |pc| {
+                sum += pc.weight;
+            }
+            break :blk sum;
+        };
+
+        /// Because why the fuck not
+        fn randomPolishChar(prng: RNG, upper: bool) u21 {
+            var r = std.rand.float(prng, f32) * weight_sum;
+            for (polish_chars) |pc| {
+                if (r < pc.weight) {
+                    return if (upper) pc.C else pc.c;
+                } else {
+                    r -= pc.weight;
+                }
+            }
+            unreachable;
+        }
+
         fn generateWord(
             prng: RNG,
             buf: []u8,
         ) usize {
             const n = randInt(prng, usize, 1, buf.len);
-            var valid_len: usize = 0;
-            while (true) {
-                // PERF:
-                //  This is inefficient, it would be better if we just generate a buffer
-                //  of characters, and start copying them back if they are 'valid' in
-                //  the destination.
-                std.rand.bytes(prng, buf[valid_len..n]);
-
-                for (buf[valid_len..n], valid_len..) |char, i| {
-                    buf[i] = std.ascii.toLower(buf[i]);
-                    if (std.ascii.isWhitespace(char) or
-                        !std.ascii.isAlphabetic(char))
-                    {
-                        valid_len = i;
-                        break;
-                    }
+            var i: usize = 0;
+            for (0..n) |j| {
+                const chosen_u21 = randomPolishChar(prng, j == 0);
+                var char_buf: [6]u8 = undefined;
+                const nbytes = std.unicode.utf8Encode(chosen_u21, &char_buf) catch unreachable;
+                if (i + nbytes < buf.len) {
+                    std.mem.copyForwards(u8, buf[i .. i + nbytes], char_buf[0..nbytes]);
+                    i += nbytes;
                 } else {
-                    // We didn't break, break out of the outer loop.
                     break;
                 }
-
-                // Okay, we've stopped somewhere, regenerate the bytes after valid_len,
-                // to generate valid bytes...
             }
 
-            return n;
+            return i;
         }
         fn randEndSentence(prng: RNG, cb: *CharBuf) void {
             const ends = [_]u8{ '.', '!', '?' };
