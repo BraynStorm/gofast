@@ -15,7 +15,11 @@
         "gofast-*.7z": true,
     },
     "cSpell.words": [
+        "fatptr",
         "GOFAST",
+        "httpz",
+        "LLPP",
+        "milli",
         "powerline"
     ],
     "triggerTaskOnSave.delay": 400,
@@ -27,5 +31,7 @@
         "zig build run": [
             "src/**/*.zig",
         ],
-    }
+    },
+    "zig.path": "~/PATH/zig",
+    "zig.zls.path": "~/PATH/zls",
 }

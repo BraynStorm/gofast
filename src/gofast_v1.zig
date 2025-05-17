@@ -5,7 +5,7 @@ const assert = std.debug.assert;
 const log = std.log.scoped(.Gofast_loadV1);
 
 const Gofast = @import("gofast.zig").Gofast;
-const SString = @import("smallstring.zig").ShortString;
+const SString = @import("SmallString.zig");
 const StringMap = Gofast.StringMap;
 const Reader = std.fs.File.Reader;
 const Writer = std.fs.File.Writer;

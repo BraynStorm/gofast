@@ -31,7 +31,10 @@ function fmt_time_exact(t) {
     return (dDisplay + hDisplay + mDisplay + sDisplay).trimEnd();
 }
 function fmt_time(t) {
-    const seconds = Number(t);
+    let seconds = Number(t);
+    let negative = seconds < 0;
+    let prefix = negative ? 'Underestimated by at least ' : '~';
+    seconds = Math.abs(seconds);
     const d = Math.floor(seconds / (3600 * 8));
     const h = Math.floor(seconds % (3600 * 8) / 3600);
     const m = Math.floor(seconds % 3600 / 60);
@@ -39,12 +42,13 @@ function fmt_time(t) {
 
     const epsilon = 0.999;
     if (d > 0) {
-        return "~" + Math.floor(d + epsilon) + "d";
+        return prefix + Math.floor(d + epsilon) + "d";
     } else if (h > 0) {
-        return "~" + Math.floor(h + epsilon) + "h";
+        return prefix + Math.floor(h + epsilon) + "h";
     } else if (m > 0) {
-        return "~" + Math.floor(m + epsilon) + "m";
+        return prefix + Math.floor(m + epsilon) + "m";
     } else {
+        if (seconds == 0) return 'Done'
         return `${seconds} s`
     }
 }

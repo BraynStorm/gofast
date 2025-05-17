@@ -1,7 +1,7 @@
 const std = @import("std");
 const Gofast = @import("gofast.zig").Gofast;
 const Ticket = Gofast.Ticket;
-const SString = @import("smallstring.zig").ShortString;
+const SString = @import("SmallString.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -12,11 +12,11 @@ const RandomStringGenOptions = struct {
     max_words: usize,
 };
 fn RandomStringGen(o: RandomStringGenOptions) type {
-    const randInt = std.rand.intRangeAtMost;
+    const randInt = std.Random.intRangeAtMost;
     const CharBuf = std.ArrayList(u8);
     return struct {
         const Self = @This();
-        const RNG = std.rand.Random;
+        const RNG = std.Random;
 
         const polish_chars = [_]struct {
             c: u21,
@@ -67,7 +67,7 @@ fn RandomStringGen(o: RandomStringGenOptions) type {
 
         /// Because why the fuck not
         fn randomPolishChar(prng: RNG, upper: bool) u21 {
-            var r = std.rand.float(prng, f32) * weight_sum;
+            var r = std.Random.float(prng, f32) * weight_sum;
             for (polish_chars) |pc| {
                 if (r < pc.weight) {
                     return if (upper) pc.C else pc.c;
@@ -87,10 +87,10 @@ fn RandomStringGen(o: RandomStringGenOptions) type {
             for (0..n) |j| {
                 const chosen_u21 = randomPolishChar(prng, j == 0);
                 var char_buf: [6]u8 = undefined;
-                const nbytes = std.unicode.utf8Encode(chosen_u21, &char_buf) catch unreachable;
-                if (i + nbytes < buf.len) {
-                    std.mem.copyForwards(u8, buf[i .. i + nbytes], char_buf[0..nbytes]);
-                    i += nbytes;
+                const n_bytes = std.unicode.utf8Encode(chosen_u21, &char_buf) catch unreachable;
+                if (i + n_bytes < buf.len) {
+                    std.mem.copyForwards(u8, buf[i .. i + n_bytes], char_buf[0..n_bytes]);
+                    i += n_bytes;
                 } else {
                     break;
                 }
@@ -99,7 +99,7 @@ fn RandomStringGen(o: RandomStringGenOptions) type {
             return i;
         }
         fn randEndSentence(prng: RNG, cb: *CharBuf) void {
-            const ends = [_]u8{ '.', '!', '?' };
+            const ends = [_]u8{ '.', '.', '.', '!', '?' };
             const idx = randInt(prng, usize, 0, ends.len);
             if (idx == 0) return;
             cb.appendAssumeCapacity(ends[idx - 1]);
@@ -112,7 +112,7 @@ fn RandomStringGen(o: RandomStringGenOptions) type {
                 " ",
                 " ",
                 " ",
-                "\n",
+                "\n\n",
                 ",",
                 ", ",
                 ", ",
@@ -199,15 +199,15 @@ fn isChildRecursive(
     return false;
 }
 
-/// Init some giberrish in the Gofast ticket system.
+/// Init some gibberish in the Gofast ticket system.
 /// Used for DX improvement.
-pub fn initGiberish(
+pub fn initGibberish(
     comptime n_tickets: usize,
     comptime n_people: usize,
     gofast: *Gofast,
     alloc: Allocator,
 ) !void {
-    var prng = comptime std.rand.DefaultPrng.init(12344321 - 20);
+    var prng = comptime std.Random.DefaultPrng.init(12344321 - 20);
     const random = prng.random();
     const t_start = std.time.nanoTimestamp();
 
@@ -235,11 +235,11 @@ pub fn initGiberish(
         var rand_description = try description_gen.generateWords(random, alloc);
         defer rand_description.deinit(alloc);
 
-        const rand_type = std.rand.intRangeAtMost(random, Gofast.Ticket.Type, 0, max_type);
-        const rand_priority = std.rand.intRangeAtMost(random, Gofast.Ticket.Priority, 0, max_priority);
-        const rand_status = std.rand.intRangeAtMost(random, Gofast.Ticket.Status, 0, max_status);
-        const rand_creator = std.rand.intRangeAtMost(random, Gofast.Person, 0, max_person);
-        const rand_create = std.rand.intRangeAtMost(random, i64, now_start, now_end);
+        const rand_type = std.Random.intRangeAtMost(random, Gofast.Ticket.Type, 0, max_type);
+        const rand_priority = std.Random.intRangeAtMost(random, Gofast.Ticket.Priority, 0, max_priority);
+        const rand_status = std.Random.intRangeAtMost(random, Gofast.Ticket.Status, 0, max_status);
+        const rand_creator = std.Random.intRangeAtMost(random, Gofast.Person, 0, max_person);
+        const rand_create = std.Random.intRangeAtMost(random, i64, now_start, now_end);
 
         const ticket = gofast.createTicket(rand_creator, rand_create, .{
             .title = rand_title.s,
@@ -250,8 +250,8 @@ pub fn initGiberish(
             .status = rand_status,
         }) catch unreachable;
 
-        const rand_update = std.rand.intRangeAtMost(random, i64, rand_create, now_end);
-        const rand_updater = std.rand.intRangeAtMost(random, Gofast.Person, 0, max_person);
+        const rand_update = std.Random.intRangeAtMost(random, i64, rand_create, now_end);
+        const rand_updater = std.Random.intRangeAtMost(random, Gofast.Person, 0, max_person);
 
         // TODO: Make this actually generate history events.
         gofast.tickets.items(.last_updated_on)[ticket - 1] = rand_update;
@@ -264,10 +264,10 @@ pub fn initGiberish(
     //  This can produce cycles,
 
     for (0..n_tickets) |me_usize| {
-        if (std.rand.int(random, u8) <= (180)) {
+        if (std.Random.int(random, u8) <= (180)) {
             const me: Ticket.Key = @intCast(1 + me_usize);
             while (true) {
-                const parent = std.rand.intRangeAtMost(random, Ticket.Key, 1, n_tickets);
+                const parent = std.Random.intRangeAtMost(random, Ticket.Key, 1, n_tickets);
 
                 // Am I my own parent (weird)?
                 if (parent == me) continue;
@@ -283,9 +283,9 @@ pub fn initGiberish(
     }
 
     for (0..n_tickets) |ticket_i| {
-        if (std.rand.int(random, u8) <= (255 / 2)) {
+        if (std.Random.int(random, u8) <= (255 / 2)) {
             const key: Ticket.Key = @intCast(1 + ticket_i);
-            const person: Gofast.Person = std.rand.intRangeAtMost(
+            const person: Gofast.Person = std.Random.intRangeAtMost(
                 random,
                 Gofast.Person,
                 1,
@@ -293,9 +293,9 @@ pub fn initGiberish(
             );
 
             // Generate them in minutes so we don't have to deal with seconds
-            const estimated = std.rand.intRangeAtMost(random, Gofast.TicketTime.Seconds, 1, 60 * 60) * 60;
-            const worktime = std.rand.intRangeAtMost(random, Gofast.TicketTime.Seconds, 1, 60 * 60) * 60;
-            const time_started = std.rand.intRangeAtMost(random, i64, 1727000000, std.time.timestamp());
+            const estimated = std.Random.intRangeAtMost(random, Gofast.TicketTime.Seconds, 1, 60 * 60) * 60;
+            const worktime = std.Random.intRangeAtMost(random, Gofast.TicketTime.Seconds, 1, 60 * 60) * 60;
+            const time_started = std.Random.intRangeAtMost(random, i64, 1727000000, std.time.timestamp());
 
             try gofast.setEstimate(key, person, estimated);
             try gofast.logWork(key, person, time_started, time_started + worktime);
@@ -304,5 +304,5 @@ pub fn initGiberish(
 
     const t_end = std.time.nanoTimestamp();
     const took = t_end - t_start;
-    std.log.info("initGiberish took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
+    std.log.info("initGibberish took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
 }

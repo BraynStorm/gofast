@@ -6,14 +6,14 @@ const httpz = @import("httpz");
 
 const Gofast = @import("gofast.zig").Gofast;
 const Ticket = Gofast.Ticket;
-const SString = @import("smallstring.zig").ShortString;
-const Giberish = @import("gibberish.zig");
+const SString = @import("SmallString.zig");
+const Gibberish = @import("gibberish.zig");
 
 const Allocator = std.mem.Allocator;
 const log = std.log.scoped(.http);
 const StrLiteral = []const u8;
 
-pub const std_options = .{
+pub const std_options = std.Options{
     .log_level = switch (builtin.mode) {
         .Debug => std.log.Level.debug,
         else => std.log.Level.info,
@@ -35,7 +35,7 @@ fn init_gofast(gf: *Gofast) !void {
             try SString.fromSlice(alloc, "Normal"),
             try SString.fromSlice(alloc, "Low"),
             try SString.fromSlice(alloc, "Tweak"),
-            try SString.fromSlice(alloc, "Negligable"),
+            try SString.fromSlice(alloc, "Negligible"),
         });
         try gf.names.types.appendSlice(alloc, &[_]SString{
             try SString.fromSlice(alloc, "Task"),
@@ -49,7 +49,7 @@ fn init_gofast(gf: *Gofast) !void {
             try SString.fromSlice(alloc, "Done"),
         });
 
-        try Giberish.initGiberish(100, 5, gf, alloc);
+        try Gibberish.initGibberish(100, 5, gf, alloc);
         try gf.save();
     }
     // Tickets.printChildrenGraph(&gofast.tickets, alloc);
@@ -110,7 +110,7 @@ pub fn main() !void {
     }
     ALLOC.free(config.persist);
 
-    var router = server.router(.{});
+    var router = try server.router(.{});
 
     //--------------------------------------------------------------------------
     // ENDPOINTS
@@ -262,7 +262,7 @@ fn simpleStaticFile(router: anytype, comptime endpoint: StrLiteral, comptime fil
             setContentType(filepath, res);
             try sendStaticFile(ALLOC, filepath, res.writer(), null);
             res.status = 200;
-            log.info("GET  " ++ endpoint ++ " | " ++ filepath, .{});
+            log.info("GET " ++ endpoint ++ " | " ++ filepath, .{});
         }
     }.handler, .{});
 }

@@ -8,7 +8,7 @@ const assert = std.debug.assert;
 const log = std.log.scoped(.Gofast_loadV0);
 
 const Gofast = @import("gofast.zig").Gofast;
-const SString = @import("smallstring.zig").ShortString;
+const SString = @import("SmallString.zig");
 const StringMap = Gofast.StringMap;
 const Reader = std.fs.File.Reader;
 
@@ -29,27 +29,27 @@ pub fn load(gofast: *Gofast, reader: Reader) !void {
 
     // Now load the MultiArrayList slice-by-slice.
     try gofast.tickets.resize(gofast.alloc, n_tickets);
-    var allslice = gofast.tickets.slice();
+    var tickets = gofast.tickets.slice();
 
-    for (allslice.items(.key)) |*i| i.* = try reader.readInt(u32, .little);
-    for (allslice.items(.details)) |*i| {
+    for (tickets.items(.key)) |*i| i.* = try reader.readInt(u32, .little);
+    for (tickets.items(.details)) |*i| {
         i.type = try reader.readInt(u8, .little);
         i.status = try reader.readInt(u8, .little);
         i.priority = try reader.readInt(u8, .little);
         i.order = @bitCast(try reader.readInt(u32, .little));
     }
-    for (allslice.items(.creator)) |*i| i.* = try reader.readInt(u32, .little);
-    for (allslice.items(.created_on)) |*i| i.* = try reader.readInt(i64, .little);
-    for (allslice.items(.last_updated_by)) |*i| i.* = try reader.readInt(u32, .little);
-    for (allslice.items(.last_updated_on)) |*i| i.* = try reader.readInt(i64, .little);
+    for (tickets.items(.creator)) |*i| i.* = try reader.readInt(u32, .little);
+    for (tickets.items(.created_on)) |*i| i.* = try reader.readInt(i64, .little);
+    for (tickets.items(.last_updated_by)) |*i| i.* = try reader.readInt(u32, .little);
+    for (tickets.items(.last_updated_on)) |*i| i.* = try reader.readInt(i64, .little);
 
     // title: SString,
     // description: SString,
-    try readStringSlice(gofast.alloc, reader, allslice.items(.title));
-    try readStringSlice(gofast.alloc, reader, allslice.items(.description));
+    try readStringSlice(gofast.alloc, reader, tickets.items(.title));
+    try readStringSlice(gofast.alloc, reader, tickets.items(.description));
 
     // parent: ?Key = null,
-    const parents = allslice.items(.parent);
+    const parents = tickets.items(.parent);
     for (0..n_tickets) |i| {
         parents[i] = null;
     }
