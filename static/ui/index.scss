@@ -292,8 +292,10 @@ div#content {
   min-height: 100vh;
 
   &>div.main {
-    width: 100%;
+    width: calc(100vw - 2 * 1em);
     margin: 0 1em;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -754,6 +756,7 @@ div.modal {
 div.cards {
   display: flex;
   flex-direction: row;
+  flex-shrink: 1;
   gap: 3px;
 
   &>div.column {
@@ -781,6 +784,9 @@ div.cards {
       border-radius: $round;
       box-shadow: 0 0 1px 1px rgba(0, 0, 0, 0.1);
       user-select: none;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 1;
 
       &.highlight {
         box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.4);
@@ -797,8 +803,17 @@ div.cards {
         gap: 0.7em;
         align-items: center;
 
+        flex-grow: 1;
+        flex-shrink: 1;
+
         &>div {
-          flex-grow: 1;
+
+          &.title {
+            text-wrap-mode: nowrap;
+            flex: 1;
+            overflow-x: hidden;
+            text-overflow: ellipsis;
+          }
         }
 
         &>span.time {

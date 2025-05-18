@@ -87,7 +87,7 @@ pub fn main() !void {
                     \\  | Argument   | Default     | Help                               |
                     \\  |------------|-------------|------------------------------------|
                     \\  | --port=    | 22000       | Specify the TCP port to listen on. |
-                    \\  | --persist= | persist.gfs | Load/save persistance here         |
+                    \\  | --persist= | persist.gfs | Load/save persistence here         |
                     \\  |------------|-------------|------------------------------------|
                     \\
                     \\error: Unknown argument {} - '{s}'.
@@ -162,7 +162,7 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
             const fields: []const std.builtin.Type.StructField = comptime std.meta.fields(@TypeOf(s));
 
             inline for (fields) |field| {
-                // NOTE: Useful for debugging the compiletime stuff.
+                // NOTE: Useful for debugging the comptime stuff.
                 //  std.debug.print("{}\n\n", .{@typeInfo(field.type)});
                 //  std.debug.print("{}\n\n", .{@typeInfo(field.type).Pointer});
                 const fmt = switch (@typeInfo(field.type)) {
@@ -220,7 +220,7 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
                 path_prefix.len + relative.len + extra_slash,
             );
 
-            // == "./static" and maybe a sash at the end
+            // == "./static" and maybe a slash at the end
             path_buf.appendSliceAssumeCapacity(path_prefix);
 
             // == "./static/" 100%

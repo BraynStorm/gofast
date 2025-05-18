@@ -1,7 +1,8 @@
 {
     "[html][css][sass][scss]": {
         "editor.indentSize": 2,
-        "editor.tabSize": 2
+        "editor.tabSize": 2,
+        "editor.formatOnSave": true,
     },
     "files.exclude": {
         "**/.git": true,

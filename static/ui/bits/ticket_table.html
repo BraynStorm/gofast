@@ -10,7 +10,6 @@
         class="ticket"
         :class="class_highlighted(key)"
         @click.debounce.100ms="
-          graph.show = true;
           ui_highlight_key(key);
           $nextTick(() => graph_update());
         "
@@ -48,30 +47,22 @@
 <!-- Card view -->
 <div class="cards" x-show="main.mode === 'cards'">
   <template x-for="(status, status_id) in names.status" :key="status_id">
-    <div class="column"
-      x-sort="ui_on_reorder_item_to($item, $position)"
-      x-sort:group="cards">
-      <div class="header" x-text="status"></div>
+    <div class="column" x-sort="ui_on_reorder_item_to($item, $position)" x-sort:group="cards">
+      <div class="header" style="position: sticky; top: 20px" x-text="status"></div>
       <template x-for="([key, t]) in ui_filter_tickets()" :key="key">
         <template x-if="t.status == status_id">
-          <div class="ticket card" x-sort:item="t"
-            :class="class_highlighted(key)"
+          <div class="ticket card" x-sort:item="t" :class="class_highlighted(key)"
             @click.debounce.100ms="
-              graph.show = true;
               ui_highlight_key(key);
               $nextTick(() => graph_update());
             "
             @dblclick="edit_ticket(key)">
             <div class="header-line">
-              <img :src="type_icon(t.type)" class="type"
-              :title="type_name(t.type)">
-              <img :src="priority_icon(t.priority)" class="priority"
-              :title="priority_name(t.priority)">
-              <span x-text="t.order"></span>
+              <img :src="type_icon(t.type)" class="type" :title="type_name(t.type)">
+              <img class="priority" :src="priority_icon(t.priority)"  :title="priority_name(t.priority)">
+              <span x-text="Math.round(t.order)"></span>
               <div class="title" x-text="t.title"></div>
-              <span class="time"
-                x-text="const p = progress(t); return fmt_time(p.estimate - p.spent)"></span>
-              <span class="expand">Ex.</span>
+              <span class="time" x-text="const p = progress(t); return fmt_time(p.estimate - p.spent)"></span>
             </div>
           </div>
         </template>
