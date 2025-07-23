@@ -202,8 +202,8 @@ fn isChildRecursive(
 /// Init some gibberish in the Gofast ticket system.
 /// Used for DX improvement.
 pub fn initGibberish(
-    comptime n_tickets: usize,
-    comptime n_people: usize,
+    n_tickets: usize,
+    n_people: usize,
     gofast: *Gofast,
     alloc: Allocator,
 ) !void {
@@ -267,7 +267,7 @@ pub fn initGibberish(
         if (std.Random.int(random, u8) <= (180)) {
             const me: Ticket.Key = @intCast(1 + me_usize);
             while (true) {
-                const parent = std.Random.intRangeAtMost(random, Ticket.Key, 1, n_tickets);
+                const parent = std.Random.intRangeAtMost(random, Ticket.Key, 1, @intCast(n_tickets));
 
                 // Am I my own parent (weird)?
                 if (parent == me) continue;
@@ -289,7 +289,7 @@ pub fn initGibberish(
                 random,
                 Gofast.Person,
                 1,
-                n_people,
+                @intCast(n_people),
             );
 
             // Generate them in minutes so we don't have to deal with seconds

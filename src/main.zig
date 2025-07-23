@@ -23,7 +23,7 @@ pub const std_options = std.Options{
 // TODO: Remove this at some point, start passing the allocator around.
 var ALLOC: Allocator = undefined;
 
-fn init_gofast(gf: *Gofast) !void {
+fn init_gofast(gf: *Gofast, gibberish: u32) !void {
     if (gf.max_ticket_key == 0 and gf.names.priorities.items.len == 0) {
         std.log.info("Initializing Gofast from scratch.", .{});
         const alloc = gf.alloc;
@@ -49,7 +49,9 @@ fn init_gofast(gf: *Gofast) !void {
             try SString.fromSlice(alloc, "Done"),
         });
 
-        try Gibberish.initGibberish(100, 5, gf, alloc);
+        if (gibberish > 0)
+            try Gibberish.initGibberish(gibberish, 5, gf, alloc);
+
         try gf.save();
     }
     // Tickets.printChildrenGraph(&gofast.tickets, alloc);
@@ -63,6 +65,7 @@ pub fn main() !void {
     const Config = struct {
         persist: []const u8,
         port: u16 = 20000,
+        gibberish: u32 = 0,
     };
 
     var config = Config{
@@ -75,20 +78,24 @@ pub fn main() !void {
 
         const arg_port = "--port=";
         const arg_persist = "--persist=";
+        const arg_gibberish = "--gibberish=";
 
         for (args[1..], 1..) |arg, i| {
             if (std.mem.startsWith(u8, arg, arg_port)) {
                 config.port = try std.fmt.parseInt(u16, arg[arg_port.len..], 10);
             } else if (std.mem.startsWith(u8, arg, arg_persist)) {
                 config.persist = try ALLOC.dupe(u8, arg[arg_persist.len..]);
+            } else if (std.mem.startsWith(u8, arg, arg_gibberish)) {
+                config.gibberish = try std.fmt.parseInt(u16, arg[arg_gibberish.len..], 10);
             } else {
                 std.debug.print(
                     \\Args:
-                    \\  | Argument   | Default     | Help                               |
-                    \\  |------------|-------------|------------------------------------|
-                    \\  | --port=    | 22000       | Specify the TCP port to listen on. |
-                    \\  | --persist= | persist.gfs | Load/save persistence here         |
-                    \\  |------------|-------------|------------------------------------|
+                    \\  | Argument     | Default     | Help                                  |
+                    \\  |--------------|-------------|---------------------------------------|
+                    \\  | --port=      | 22000       | Specify the TCP port to listen on.    |
+                    \\  | --persist=   | persist.gfs | Load/save persistence here            |
+                    \\  | --gibberish= | 0           | Number of random tickets to init with |
+                    \\  |--------------|-------------|---------------------------------------|
                     \\
                     \\error: Unknown argument {} - '{s}'.
                 , .{ i, arg });
@@ -99,7 +106,7 @@ pub fn main() !void {
 
     var gofast: Gofast = undefined;
     gofast = try Gofast.init(ALLOC, config.persist);
-    try init_gofast(&gofast);
+    try init_gofast(&gofast, config.gibberish);
     var server = try httpz.Server(*Gofast).init(ALLOC, .{
         .address = "0.0.0.0",
         .port = config.port,
@@ -122,6 +129,7 @@ pub fn main() !void {
 
     //TODO: Use @embedFile to have them as "DEFAULTS" but still allow HDD edits, fswatch and reload.
     simpleStaticFile(router, "/", "static/ui/index.html");
+    simpleStaticFile(router, "/experiments", "static/ui/experiments.html");
     simpleStaticFile(router, "/wasm", "zig-out/bin/gofast.wasm");
 
     simpleStaticFiles(router, "/static/*", "static");
@@ -460,7 +468,7 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
         const new_key = blk: {
             gofast.lock.lock();
             defer gofast.lock.unlock();
-            break :blk try gofast.createTicket(
+            const key = try gofast.createTicket(
                 // TODO: Add authentication
                 0,
                 Gofast.timestamp(),
@@ -473,6 +481,8 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
                     .priority = @intCast(priority_i64),
                 },
             );
+            try gofast.save();
+            break :blk key;
         };
 
         res.status = 200;
@@ -491,6 +501,7 @@ fn apiDeleteTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !
             gofast.lock.lock();
             defer gofast.lock.unlock();
             try gofast.deleteTicket(key);
+            try gofast.save();
         }
         res.status = 200;
     } else {

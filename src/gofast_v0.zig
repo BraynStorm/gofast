@@ -73,7 +73,7 @@ fn readNames(gofast: *Gofast, reader: Reader) !void {
     log.info("Loaded {} people", .{gofast.names.people.items.len});
 }
 fn readGraphs(gofast: *Gofast, reader: Reader) !void {
-    const n_graphs = try reader.readInt(u64, .little);
+    const n_graphs: usize = @intCast(try reader.readInt(u64, .little));
     log.info("n_graphs={}", .{n_graphs});
 
     var parents = gofast.tickets.items(.parent);
@@ -85,7 +85,7 @@ fn readGraphs(gofast: *Gofast, reader: Reader) !void {
             // Child Graph
             0 => {
                 log.info("Loading Children Graph", .{});
-                const n_graph_len = try reader.readInt(u64, .little);
+                const n_graph_len: usize = @intCast(try reader.readInt(u64, .little));
 
                 log.info("n_graph_len={}", .{n_graph_len});
                 try gofast.graph_children.resize(gofast.alloc, n_graph_len);
@@ -130,7 +130,7 @@ fn readTicketTimeSpent(gofast: *Gofast, reader: Reader) !void {
 }
 
 fn readStringMapAlloc(alloc: Allocator, reader: std.fs.File.Reader, into: *StringMap) !void {
-    const n = try reader.readInt(u64, .little);
+    const n: usize = @intCast(try reader.readInt(u64, .little));
     try into.ensureUnusedCapacity(alloc, n);
 
     for (0..n) |_| {

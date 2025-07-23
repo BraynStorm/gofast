@@ -146,7 +146,7 @@ pub const Gofast = struct {
 
     /// Init the whole system, with `persistence` as a relative
     /// path for storing/loading data from.
-    pub fn init(alloc: Allocator, persitence: ?[]const u8) !Gofast {
+    pub fn init(alloc: Allocator, persistence: ?[]const u8) !Gofast {
         const INITIAL_CAPACITY = 16;
 
         var g = Gofast{
@@ -164,7 +164,7 @@ pub const Gofast = struct {
         try g.tickets.ensureTotalCapacity(alloc, INITIAL_CAPACITY);
 
         const cwd = std.fs.cwd();
-        if (persitence) |p| {
+        if (persistence) |p| {
             var load_from_file = true;
             const file = cwd.openFile(p, .{ .mode = .read_write }) catch |e| blk: {
                 log.info("Failed to open {s} ({}), creating...", .{ p, e });
