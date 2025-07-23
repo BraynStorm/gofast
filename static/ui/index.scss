@@ -189,9 +189,18 @@ aside {
     border-right: $border;
 
     &.edit {
+
+      &.estimate {
+        input {
+          width: 5em;
+        }
+      }
+
+
       input[type=text] {
         background-color: $c1;
         color: $c6;
+
       }
 
       div.controls {
@@ -245,9 +254,13 @@ aside {
   &>.description {
     font-family: "FQ";
     font-size: 14px;
-    overflow-y: auto;
-    overflow-x: hidden;
     margin: 1em;
+    min-height: 5em;
+
+    &>textarea {
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
   }
 
 }

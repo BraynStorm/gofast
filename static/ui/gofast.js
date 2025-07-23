@@ -16,6 +16,17 @@ function display_key(key, max_key) {
 
 const DEBUG = console.log;
 
+function parse_time_string(ts) {
+    /* Parse a time string in the following format: 3w 1d 11h 15m */
+    const parts = ts.split(' '); 
+    let weeks = parts.find(p => p.endsWith('w'));
+    let days = parts.find(p => p.endsWith('d'));
+    let hours = parts.find(p => p.endsWith('h'));
+    let minutes = parts.find(p => p.endsWith('m'));
+
+    
+
+}
 
 function fmt_time_exact(t) {
     const seconds = Number(t);
@@ -51,6 +62,15 @@ function fmt_time(t) {
         if (seconds == 0) return 'Done'
         return `${seconds} s`
     }
+}
+function fmt_estimate_remaining(estimated, spent) {
+    // Show the estimated time, if estimated or spent are > 0.
+    if (estimated <= 0 && spent <= 0) {
+        return "";
+    }
+
+    const p = estimated - spent;
+    return `${fmt_time(p)} (${parseInt(Math.min(p, 1) * 100)}%)`;
 }
 
 function array_remove(array, item) {
@@ -890,6 +910,16 @@ document.addEventListener("alpine:init", () => {
                 ticket_spent += spent[p];
             }
             return { spent: ticket_spent, estimate: ticket_estimate };
+        },
+        add_time(key, seconds) {
+            /* Add 'seconds' to the spent time of the given ticket. */
+
+            // Check if the ticket_time array has this key
+            if (!this.ticket_time[key]) {
+                this.ticket_time[key] = 0;
+            }
+            console.log(this.ticket_time[key]);
+            this.ticket_time[key] += seconds;
         },
         progress_pct(key) {
             const p = this.progress(key);

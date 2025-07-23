@@ -39,6 +39,29 @@
         </div>
       </template>
     </div>
+
+    <div class="estimate">
+      <input type="text" name="et_estimate" x-model="m_et.estimate" />
+    </div>
+
+    <div class="spent">
+      <!-- Spent time -->
+      <span x-text="`Spent: ${fmt_time_exact(ticket_time[m_et.key])}`"></span>
+      <button @click="add_time(m_et.key, 3600*1)">+1h</button>
+      <button @click="add_time(m_et.key, 3600*2)">+2h</button>
+      <button @click="add_time(m_et.key, 3600*4)">+4h</button>
+      <button @click="add_time(m_et.key, 3600*8)">+1d</button>
+    </div>
+
+    <!-- IF-guard this, so that it doesn't take forever to load the main table. -->
+    <template x-if="left_panel.mode === 'edit'">
+      <select class="et_parent" x-model="m_et.parent">
+        <option value>No Parent</option>
+        <template x-for="(t, key) in tickets" :key="key">
+          <option :value="key" x-text="display_key(key) + ': ' + t.title.substring(0, 14) + '...'"></option>
+        </template>
+      </select>
+    </template>
   </div>
 
   <!-- Editing the description -->

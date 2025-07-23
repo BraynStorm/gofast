@@ -28,8 +28,7 @@
         <!-- Progress bar -->
         <td x-data="progress(key)">
           <div class="progress-bar"
-            x-data="{ p: (estimate > 0 ? spent/estimate : 0), left: estimate - spent}"
-            x-text="`${fmt_time(left)} (${parseInt(Math.min(p, 1)*100)}%)`">
+            x-text="`${fmt_estimate_remaining(estimate, spent)}`">
           </div>
         </td>
         <td x-text="t.order"></td>
