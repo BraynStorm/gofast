@@ -1,7 +1,8 @@
 {
     "[html][css][sass][scss]": {
         "editor.indentSize": 2,
-        "editor.tabSize": 2
+        "editor.tabSize": 2,
+        "editor.formatOnSave": true,
     },
     "files.exclude": {
         "**/.git": true,
@@ -15,7 +16,11 @@
         "gofast-*.7z": true,
     },
     "cSpell.words": [
+        "fatptr",
         "GOFAST",
+        "httpz",
+        "LLPP",
+        "milli",
         "powerline"
     ],
     "triggerTaskOnSave.delay": 400,
@@ -27,5 +32,7 @@
         "zig build run": [
             "src/**/*.zig",
         ],
-    }
+    },
+    "zig.path": "~/PATH/zig",
+    "zig.zls.path": "~/PATH/zls",
 }

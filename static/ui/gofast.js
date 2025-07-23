@@ -31,7 +31,10 @@ function fmt_time_exact(t) {
     return (dDisplay + hDisplay + mDisplay + sDisplay).trimEnd();
 }
 function fmt_time(t) {
-    const seconds = Number(t);
+    let seconds = Number(t);
+    let negative = seconds < 0;
+    let prefix = negative ? 'Underestimated by at least ' : '~';
+    seconds = Math.abs(seconds);
     const d = Math.floor(seconds / (3600 * 8));
     const h = Math.floor(seconds % (3600 * 8) / 3600);
     const m = Math.floor(seconds % 3600 / 60);
@@ -39,12 +42,13 @@ function fmt_time(t) {
 
     const epsilon = 0.999;
     if (d > 0) {
-        return "~" + Math.floor(d + epsilon) + "d";
+        return prefix + Math.floor(d + epsilon) + "d";
     } else if (h > 0) {
-        return "~" + Math.floor(h + epsilon) + "h";
+        return prefix + Math.floor(h + epsilon) + "h";
     } else if (m > 0) {
-        return "~" + Math.floor(m + epsilon) + "m";
+        return prefix + Math.floor(m + epsilon) + "m";
     } else {
+        if (seconds == 0) return 'Done'
         return `${seconds} s`
     }
 }
@@ -81,6 +85,9 @@ document.addEventListener("alpine:init", () => {
 
         max_key: 0,
 
+        main: {
+            mode: Alpine.$persist('table'),
+        },
         // Model: The ticket table.
         m_table: {
             search: {
@@ -884,6 +891,12 @@ document.addEventListener("alpine:init", () => {
             const p = this.progress(key);
             if (p.estimate == 0) return 0;
             return p.spent / p.estimate;
-        }
+        },
+        ui_highlight_key(key) {
+            this.m_table.highlight_key = key;
+        },
+        class_highlighted(key) {
+            return this.m_table.highlight_key == key ? "highlight" : "";
+        },
     }));
 });

@@ -1,6 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
-const SString = @import("smallstring.zig").ShortString;
+const SString = @import("SmallString.zig");
 const SIMDArray = @import("simdarray.zig").SIMDSentinelArray;
 
 const V0 = @import("gofast_v0.zig");
@@ -39,11 +39,11 @@ pub const Gofast = struct {
     /// Allocator stored for convenience.
     alloc: Allocator = undefined,
     /// Where do we save the data. Null - in-memory storage only.
-    persistance: ?std.fs.File = null,
+    persistence: ?std.fs.File = null,
 
     /// Storage of keys and other one-to-one things.
     ///
-    /// Always kept sorted by .key. (Implcit)
+    /// Always kept sorted by .key. (Implicit)
     tickets: Tickets = .{},
     time_spent: std.MultiArrayList(TicketTime) = .{},
     // PERF: Convert to a hashmap with a linked list.
@@ -146,7 +146,7 @@ pub const Gofast = struct {
 
     /// Init the whole system, with `persistence` as a relative
     /// path for storing/loading data from.
-    pub fn init(alloc: Allocator, persitence: ?[]const u8) !Gofast {
+    pub fn init(alloc: Allocator, persistence: ?[]const u8) !Gofast {
         const INITIAL_CAPACITY = 16;
 
         var g = Gofast{
@@ -164,7 +164,7 @@ pub const Gofast = struct {
         try g.tickets.ensureTotalCapacity(alloc, INITIAL_CAPACITY);
 
         const cwd = std.fs.cwd();
-        if (persitence) |p| {
+        if (persistence) |p| {
             var load_from_file = true;
             const file = cwd.openFile(p, .{ .mode = .read_write }) catch |e| blk: {
                 log.info("Failed to open {s} ({}), creating...", .{ p, e });
@@ -177,9 +177,9 @@ pub const Gofast = struct {
                 break :blk f;
             };
 
-            g.persistance = file;
+            g.persistence = file;
             if (load_from_file) {
-                log.info("Loading data from persistance {s}", .{p});
+                log.info("Loading data from persistence {s}", .{p});
                 try g.load(file.reader());
                 g.compactChildrenGraph();
             } else {
@@ -191,7 +191,7 @@ pub const Gofast = struct {
         return g;
     }
     pub fn deinit(self: *Self) void {
-        if (self.persistance) |p| {
+        if (self.persistence) |p| {
             self.save() catch |e| {
                 log.err("Failed to save on deinit(). error: {}", .{e});
             };
@@ -217,12 +217,12 @@ pub const Gofast = struct {
 
     /// Save the state of Gofast to the persistence file, if any.
     pub fn save(self: *Self) !void {
-        if (self.persistance) |p| {
+        if (self.persistence) |p| {
             log.info(".save", .{});
             try p.seekTo(0);
             try self.writeToFile(p.writer());
         } else {
-            return error.NoPersistance;
+            return error.NoPersistence;
         }
     }
     /// Generate a "now" timestamp, in the units expected by Gofast (ms).
@@ -235,7 +235,7 @@ pub const Gofast = struct {
     /// now = Gofast.timestamp()
     pub fn createTicket(
         self: *Self,
-        craetor: Person,
+        creator: Person,
         now: Timestamp,
         action: History.Event.Action.CreateTicket,
     ) !Ticket.Key {
@@ -248,16 +248,16 @@ pub const Gofast = struct {
             .priority = action.priority,
             .type_ = action.type_,
             .status = action.status,
-            .creator = craetor,
+            .creator = creator,
             .created_on = now,
-            .last_updated_by = craetor,
+            .last_updated_by = creator,
             .last_updated_on = now,
         });
 
         try self.history.addEvent(self.alloc, .{
             .timestamp = now,
             .ticket = ticket,
-            .user = craetor,
+            .user = creator,
             .action = .{ .create_ticket = action },
         });
 
@@ -427,7 +427,7 @@ pub const Gofast = struct {
         const version = try reader.readInt(u32, .little);
         switch (version) {
             0 => try V0.load(self, reader),
-            else => return error.UnkownVersion,
+            else => return error.UnknownVersion,
         }
         const t_end = std.time.nanoTimestamp();
         const took = t_end - t_start;
@@ -437,10 +437,10 @@ pub const Gofast = struct {
     fn compactChildrenGraph(self: *Self) void {
         var i: usize = 0;
         const slice = self.graph_children.slice();
-        const tos = slice.items(.to);
-        const froms = slice.items(.from);
+        const arr_to = slice.items(.to);
+        const arr_from = slice.items(.from);
 
-        const t_start_comapct = std.time.nanoTimestamp();
+        const t_start_compact = std.time.nanoTimestamp();
         while (true) {
             // Important! Do not for(..) loop this, as it will fuck up when we
             // try to delete thing WHILE iterating.
@@ -449,8 +449,8 @@ pub const Gofast = struct {
                 break;
             }
 
-            const from = froms[i];
-            const to = tos[i];
+            const from = arr_from[i];
+            const to = arr_to[i];
 
             // Check for empty buckets
             if (to.items[0] == 0) {
@@ -478,20 +478,20 @@ pub const Gofast = struct {
             }
         };
 
-        self.graph_children.sort(Compare{ .from = froms });
+        self.graph_children.sort(Compare{ .from = arr_from });
         const t_end_sort = std.time.nanoTimestamp();
 
-        std.log.info("compact_children_graph: compacting took {}us", .{@divTrunc((t_start_comapct - t_end_compact), std.time.ns_per_us)});
+        std.log.info("compact_children_graph: compacting took {}us", .{@divTrunc((t_start_compact - t_end_compact), std.time.ns_per_us)});
         std.log.info("compact_children_graph: sorting took {}us", .{@divTrunc((t_end_sort - t_end_compact), std.time.ns_per_us)});
     }
     // fn lessThan_GraphChildren(self: [] const , a: usize, b: usize) bool {}
-    fn deinitStringMap(alloc: Allocator, stringmap: *StringMap) void {
-        var i = stringmap.items.len;
+    fn deinitStringMap(alloc: Allocator, sm: *StringMap) void {
+        var i = sm.items.len;
         while (i > 0) {
             i -= 1;
-            stringmap.items[i].deinit(alloc);
+            sm.items[i].deinit(alloc);
         }
-        stringmap.deinit(alloc);
+        sm.deinit(alloc);
     }
 
     fn writeStringMap(writer: std.fs.File.Writer, map: *const StringMap) !void {
@@ -523,36 +523,36 @@ pub const Gofast = struct {
         //max_key
         try writer.writeInt(u32, self.max_ticket_key, .little);
 
-        const allslice = self.tickets.slice();
+        const tickets = self.tickets.slice();
 
-        //ntickets
-        try writer.writeInt(u32, @intCast(allslice.len), .little);
+        //n_tickets
+        try writer.writeInt(u32, @intCast(tickets.len), .little);
 
         //-tickets
         //--key
         //--type
         //--priority
         //--status
-        for (allslice.items(.key)) |e| try writer.writeInt(u32, e, .little);
-        for (allslice.items(.details)) |e| {
+        for (tickets.items(.key)) |e| try writer.writeInt(u32, e, .little);
+        for (tickets.items(.details)) |e| {
             try writer.writeInt(u8, e.type, .little);
             try writer.writeInt(u8, e.status, .little);
             try writer.writeInt(u8, e.priority, .little);
             comptime assert(@sizeOf(u32) == @sizeOf(Ticket.Order));
             try writer.writeInt(u32, @bitCast(e.order), .little);
         }
-        for (allslice.items(.creator)) |e| try writer.writeInt(u32, e, .little);
-        for (allslice.items(.created_on)) |e| try writer.writeInt(i64, e, .little);
-        for (allslice.items(.last_updated_by)) |e| try writer.writeInt(u32, e, .little);
-        for (allslice.items(.last_updated_on)) |e| try writer.writeInt(i64, e, .little);
+        for (tickets.items(.creator)) |e| try writer.writeInt(u32, e, .little);
+        for (tickets.items(.created_on)) |e| try writer.writeInt(i64, e, .little);
+        for (tickets.items(.last_updated_by)) |e| try writer.writeInt(u32, e, .little);
+        for (tickets.items(.last_updated_on)) |e| try writer.writeInt(i64, e, .little);
 
         //--title
         //--description
-        for (allslice.items(.title)) |e| {
+        for (tickets.items(.title)) |e| {
             try writer.writeInt(u32, @intCast(e.s.len), .little);
             try writer.writeAll(e.s);
         }
-        for (allslice.items(.description)) |e| {
+        for (tickets.items(.description)) |e| {
             try writer.writeInt(u32, @intCast(e.s.len), .little);
             try writer.writeAll(e.s);
         }
@@ -561,7 +561,7 @@ pub const Gofast = struct {
             //n_graphs
             try writer.writeInt(u64, 1, .little);
 
-            //linktype=child
+            //link_type=child
             const child = 0; // Ticket.LinkType.child
             try writer.writeInt(u8, child, .little);
 
@@ -670,26 +670,26 @@ pub const Gofast = struct {
     }
 
     fn clearChildrenFromGraphWithIndex(self: *Self, ticket: Ticket.Key) void {
-        const froms = self.graph_children.items(.from);
-        const tos = self.graph_children.items(.to);
+        const arr_from = self.graph_children.items(.from);
+        const arr_to = self.graph_children.items(.to);
         const ticket_keys = self.tickets.items(.key);
         const ticket_parents = self.tickets.items(.parent);
 
-        // Loop over the whole chidren graph, looking for the parent's entries.
+        // Loop over the whole children graph, looking for the parent's entries.
         var i: usize = self.graph_children.len;
 
         while (i > 0) {
             i -= 1;
-            const from = froms[i];
+            const from = arr_from[i];
             if (from == ticket) {
                 // Make sure to clear each child's .parent to null.
-                const children: Ticket.FatLink.To = tos[i];
+                const children: Ticket.FatLink.To = arr_to[i];
 
                 // PERF:
                 //  There are many ways to optimize this.
                 //    - Keep a key-index pair of the last child, reducing the
                 //      search space "in half", something like findIndexBounded()...
-                //    - We can also implement binary serach here.
+                //    - We can also implement binary search here.
                 //    - We can also also implement SIMD searching for multiple children
                 //    at the same time.
                 for (children.array()) |child_key| {
@@ -707,14 +707,14 @@ pub const Gofast = struct {
     }
 
     fn clearParentFromGraphWithIndex(self: *Self, ticket: Ticket.Key, parent: Ticket.Key) void {
-        const froms = self.graph_children.items(.from);
-        const tos = self.graph_children.items(.to);
+        const arr_from = self.graph_children.items(.from);
+        const arr_to = self.graph_children.items(.to);
 
-        // Loop over the whole chidren graph, looking for the parent's entries.
-        for (froms, 0..) |from, i| {
+        // Loop over the whole children graph, looking for the parent's entries.
+        for (arr_from, 0..) |from, i| {
             if (from == parent) {
                 // Okay, tos[i] has children of old_p.
-                if (tos[i].maybeRemoveOne(ticket)) {
+                if (arr_to[i].maybeRemoveOne(ticket)) {
                     // We're done.
                     break;
                 } else {
@@ -731,14 +731,14 @@ pub const Gofast = struct {
 
         if (old_parent) |old_p| {
             // We need to disconnect the parent's children graph.
-            const froms = self.graph_children.items(.from);
-            const tos = self.graph_children.items(.to);
+            const arr_from = self.graph_children.items(.from);
+            const arr_to = self.graph_children.items(.to);
 
-            // Loop over the whole chidren graph, looking for the parent's entries.
-            for (froms, 0..) |from, i| {
+            // Loop over the whole children graph, looking for the parent's entries.
+            for (arr_from, 0..) |from, i| {
                 if (from == old_p) {
                     // Okay, tos[i] has children of old_p.
-                    if (tos[i].maybeRemoveOne(ticket)) {
+                    if (arr_to[i].maybeRemoveOne(ticket)) {
                         // We're done.
                         break;
                     } else {
@@ -761,14 +761,14 @@ pub const Gofast = struct {
 
         if (old_parent) |old_p| {
             // We need to disconnect the parent's children graph.
-            const froms = self.graph_children.items(.from);
-            const tos = self.graph_children.items(.to);
+            const arr_from = self.graph_children.items(.from);
+            const arr_to = self.graph_children.items(.to);
 
-            // Loop over the whole chidren graph, looking for the parent's entries.
-            for (froms, 0..) |from, i| {
+            // Loop over the whole children graph, looking for the parent's entries.
+            for (arr_from, 0..) |from, i| {
                 if (from == old_p) {
                     // Okay, tos[i] has children of old_p.
-                    if (tos[i].maybeRemoveOne(ticket)) {
+                    if (arr_to[i].maybeRemoveOne(ticket)) {
                         // We're done.
                         break;
                     } else {
@@ -781,18 +781,18 @@ pub const Gofast = struct {
 
         if (new_parent) |new_p| {
             // We need to connect the new_parent's children graph.
-            const froms = self.graph_children.items(.from);
-            const tos = self.graph_children.items(.to);
+            const arr_from = self.graph_children.items(.from);
+            const arr_to = self.graph_children.items(.to);
 
-            // Loop over the whole chidren graph, looking for the parent's entries.
-            for (froms, 0..) |from, i| {
+            // Loop over the whole children graph, looking for the parent's entries.
+            for (arr_from, 0..) |from, i| {
                 if (from == new_p) {
                     // Okay, tos[i] has children of new_p.
-                    if (tos[i].maybeAddOne(ticket)) {
+                    if (arr_to[i].maybeAddOne(ticket)) {
                         // We're done.
                         break;
                     } else {
-                        // Keep searching for a speot
+                        // Keep searching for a spot
                         continue;
                     }
                 }
@@ -864,13 +864,13 @@ pub const Gofast = struct {
         const spent: Gofast.TicketTime.Seconds = @intCast(worked_seconds_i64);
 
         // TODO: Check if ticket actually exists.
-        // TODO(histroy): Save the start/end times in a separate structure.
+        // TODO(history): Save the start/end times in a separate structure.
 
-        var allslice = self.time_spent.slice();
+        var time_spent = self.time_spent.slice();
 
-        for (allslice.items(.ticket), allslice.items(.person), 0..) |t, p, i| {
+        for (time_spent.items(.ticket), time_spent.items(.person), 0..) |t, p, i| {
             if (t == ticket and p == person) {
-                var time = &allslice.items(.time)[i];
+                var time = &time_spent.items(.time)[i];
                 log.debug("logWork: found entry for t={}, p={}. oldSeconds={}, newSeconds={}", .{
                     ticket, person, time.spent, time.spent + spent,
                 });
@@ -895,13 +895,13 @@ pub const Gofast = struct {
         estimate: Gofast.TicketTime.Seconds,
     ) !void {
         // TODO: Check if ticket actually exists.
-        // TODO(histroy): Save the start/end times in a separate structure.
+        // TODO(history): Save the start/end times in a separate structure.
 
-        var allslice = self.time_spent.slice();
+        var time_spent = self.time_spent.slice();
 
-        for (allslice.items(.ticket), allslice.items(.person), 0..) |t, p, i| {
+        for (time_spent.items(.ticket), time_spent.items(.person), 0..) |t, p, i| {
             if (t == ticket and p == person) {
-                var time = &allslice.items(.time)[i];
+                var time = &time_spent.items(.time)[i];
                 log.debug("setEstimate: found entry for t={}, p={}. e={}, new_e={}", .{
                     ticket, person, time.estimate, time.estimate + estimate,
                 });
@@ -909,7 +909,7 @@ pub const Gofast = struct {
                 break;
             }
         } else {
-            // We didn't find an entry matchin the ticket-person.
+            // We didn't find an entry matching the ticket-person.
             try self.time_spent.append(self.alloc, .{
                 .ticket = ticket,
                 .person = person,
@@ -959,7 +959,7 @@ pub const History = struct {
                 parent: ??Gofast.Ticket.Key = null,
                 type_: ?Gofast.Ticket.Type = null,
                 priority: ?Gofast.Ticket.Priority = null,
-                status: Gofast.Ticket.Status = null,
+                status: ?Gofast.Ticket.Status = null,
                 order: ?Gofast.Ticket.Order = null,
             };
             pub const UpdateTime = struct {
@@ -1018,7 +1018,7 @@ test "Gofast.gibberish" {
     var gf = try Gofast.init(alloc, null);
     defer gf.deinit();
 }
-test "Gofast.persistance" {
+test "Gofast.persistence" {
     const TEST = std.testing;
     const alloc = TEST.allocator;
     const filepath = "persist.test.gfs";
@@ -1031,7 +1031,7 @@ test "Gofast.persistance" {
     };
     defer std.fs.cwd().deleteFile(filepath) catch unreachable;
 
-    // Create the persistance file with some known data.
+    // Create the persistence file with some known data.
     var ticket_create_date = [3]i64{ 0, 0, 0 };
     {
         var gofast = try Gofast.init(alloc, filepath);
@@ -1045,7 +1045,7 @@ test "Gofast.persistance" {
         try TEST.expectEqual(0, gofast.time_spent.len);
 
         // Are we even going to attempt saving?
-        try TEST.expect(gofast.persistance != null);
+        try TEST.expect(gofast.persistence != null);
 
         // Statuses
         try TEST.expectEqual(0, try gofast.createStatus(.{ .name = "status0" }));
@@ -1099,7 +1099,7 @@ test "Gofast.persistance" {
         // try TEST.expectEqual(3, gofast.history.events.len);
     }
 
-    // Load the persistance data and check if everything got loaded correctly.
+    // Load the persistence data and check if everything got loaded correctly.
     {
         var gofast = try Gofast.init(alloc, filepath);
         defer gofast.deinit();
@@ -1226,7 +1226,7 @@ test "Ticket.Link" {
     try std.testing.expectEqual(@sizeOf(Gofast.Ticket.Link), @sizeOf(usize));
 }
 
-test "Gofast.ticketstore" {
+test "Gofast.TicketStore" {
     const TEST = std.testing;
     const alloc = TEST.allocator;
 

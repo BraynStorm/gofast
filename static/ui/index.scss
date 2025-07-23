@@ -67,19 +67,22 @@ CHORUS
 
 
 /*  Colors  */
-$c1: #F5F9E9; //Ivory          
-$c2: #F9DEC9; //Champagne pink 
+$c5: #F5F9E9; //Ivory          
+$c4: #F9DEC9; //Champagne pink 
 $c3: #DC6504; //Cocoa Brown    
-$c4: #9D4B43; //Chestnut       
-$c5: #14110F; //Smoky Black   
+$c2: #6d2d0f; //Chestnut       
+$c1: #14110F; //Smoky Black   
 
 $c6: #A8A8A8; // [FAKE] Grayish 
 $cLink: rgb(0, 102, 204); // [FAKE]
 $cDarken: rgba(0, 0, 0, 0.1); // [FAKE]
 $cGrayBorder: #888;
+$cWhite: $c1;
 
 $scrollPastEnd : 5em;
 $round: 8px;
+
+$heightPowerline: 1.5em;
 
 
 @font-face {
@@ -121,7 +124,7 @@ html {
 body {
   font-family: 'FQ', 'Roboto', Arial, sans-serif;
   background: $c1;
-  overflow: hidden;
+  color: $c5;
 }
 
 /*******************************************************************************
@@ -131,8 +134,10 @@ body {
 aside {
   $border: 0;
   $rounding: 20px;
-
+  position: sticky;
+  top: 1em;
   width: 40em;
+  height: calc(100vh - 1em * 2);
 
   display: flex;
   flex-direction: column;
@@ -184,6 +189,11 @@ aside {
     border-right: $border;
 
     &.edit {
+      input[type=text] {
+        background-color: $c1;
+        color: $c6;
+      }
+
       div.controls {
         justify-content: stretch;
 
@@ -212,13 +222,13 @@ aside {
         flex-direction: column;
         border-radius: $round;
         overflow: hidden;
-        border: 1px solid #888;
-        background-color: #888;
-        gap:1px;
+        border: 1px solid $cGrayBorder;
+        background-color: $cGrayBorder;
+        gap: 1px;
 
         &>div.icon-grid {
           border-radius: 0;
-          border:0;
+          border: 0;
         }
       }
     }
@@ -235,6 +245,8 @@ aside {
   &>.description {
     font-family: "FQ";
     font-size: 14px;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
 }
@@ -277,35 +289,35 @@ div#content {
   display: flex;
   flex-direction: row;
   justify-content: stretch;
-  height: 100vh;
+  min-height: 100vh;
 
-  // Because :first-child was broken... had to use .fc as a class
-  &>div.fc {
-    max-height: 100vh;
+  &>div.main {
+    width: calc(100vw - 2 * 1em);
+    margin: 0 1em;
     display: flex;
-    flex: 1;
     flex-direction: column;
-    justify-content: stretch;
-    align-items: stretch;
-    $margin: 1em;
-    margin: 0 $margin;
-    max-width: calc(100vw - $margin * 2);
   }
 }
 
 /*******************************************************************************
 ****     THE TABLE     *********************************************************
 *******************************************************************************/
-
+div.top-panel {
+  position: sticky;
+  top: 0;
+  left: 0;
+  background-color: $c1;
+  ;
+}
 
 div.icon-grid {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  border: 1px solid #888;
+  border: 1px solid $cGrayBorder;
+  background-color: $cGrayBorder;
   border-radius: $round;
   overflow: hidden;
-  background-color: #888;
   gap: 1px;
 
   * {
@@ -324,19 +336,21 @@ div.icon-grid {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-color: white;
+    background-color: $cWhite;
     flex: 1 1 2em;
     text-wrap: nowrap;
 
     &.selected {
       background-color: $c2;
+      color: $c5;
     }
 
     span {
       padding: .5em;
     }
 
-    &>img {
+    &>img,
+    &>button {
       height: 32px;
       padding: .1em;
       text-align: center;
@@ -351,9 +365,8 @@ div.icon-selectors>div.sorting {
   align-items: stretch;
   justify-content: stretch;
   flex-direction: row;
-  background-color: #888;
+  background-color: $cGrayBorder;
   overflow: hidden;
-  margin: 0 0.7em;
   gap: 1px;
 
   &>div.sorting {
@@ -376,12 +389,12 @@ div.icon-selectors>div.sorting {
     are making it difficult to which lane
     each icon belongs to.
 
-    border-left: 1px solid #888;
-    border-right: 1px solid #888;
-    border-bottom: 1px solid #888;
+    border-left: 1px solid $cGrayBorder;
+    border-right: 1px solid $cGrayBorder;
+    border-bottom: 1px solid $cGrayBorder;
 
     &:nth-child(2) {
-      border-top: 1px solid #888;
+      border-top: 1px solid $cGrayBorder;
       border-top-left-radius: $round;
       border-top-right-radius: $round;
     }
@@ -391,7 +404,7 @@ div.icon-selectors>div.sorting {
       border-bottom-right-radius: $round;
     }
   */
-  border: 1px solid #888;
+  border: 1px solid $cGrayBorder;
   border-radius: $round;
 
 
@@ -404,9 +417,13 @@ div.icon-selectors>div.sorting {
 
 // Row: Search
 div.ticket-search {
+  $topGap: 0.3em;
+
   display: flex;
-  margin: 0.3em 0;
+  padding: $topGap 0;
   justify-content: stretch;
+  gap: 5px;
+  width: 100%;
 
   &>input[type=search] {
     font-family: 'FQ';
@@ -414,19 +431,20 @@ div.ticket-search {
     display: block;
     border-radius: $round;
     flex: 1 1 20em;
-    border: 1px solid #888;
+    border: 1px solid $cGrayBorder;
+    background-color: $c1;
+    color: $c5;
+    outline: none;
   }
 }
 
 div.ticket-table {
-  overflow-y: auto;
-  overflow-x: hidden;
-
   &>div {
     padding: 1em;
   }
 
   &>table {
+    width: 100%;
     $border: 1px solid $c6;
     margin-bottom: 4em;
     border: $border;
@@ -514,9 +532,15 @@ div.ticket-table {
   }
 
   .description {}
+
+  .status {
+    font-weight: bold;
+  }
 }
 
 @mixin svg-button($name) {
+  color: $c5;
+
   background-color: transparent;
   background-image: url('/static/ui/icons/button_#{$name}.svg');
   background-repeat: no-repeat;
@@ -563,24 +587,26 @@ div.ticket-table {
 
 }
 
-button.btn-cross {
-  @include svg-button("cross");
-}
+button {
+  &.btn-cross {
+    @include svg-button("cross");
+  }
 
-button.btn-plus {
-  @include svg-button("plus");
-}
+  &.btn-plus {
+    @include svg-button("plus");
+  }
 
-button.btn-checkmark {
-  @include svg-button("checkmark");
-}
+  &.btn-checkmark {
+    @include svg-button("checkmark");
+  }
 
-button.btn-pencil-h {
-  @include svg-button("pencil_h");
-}
+  &.btn-pencil-h {
+    @include svg-button("pencil_h");
+  }
 
-button.btn-pencil-45 {
-  @include svg-button("pencil_45");
+  &.btn-pencil-45 {
+    @include svg-button("pencil_45");
+  }
 }
 
 /******************************************************************************
@@ -595,13 +621,13 @@ div.tooltip {
   $round: 8px;
   border-radius: $round;
 
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
 
   overflow: hidden;
 
-  background: $c2;
+  background: $c1;
   border: 1px solid $c5;
 
   &>img {
@@ -611,7 +637,6 @@ div.tooltip {
 
 div.powerline {
   display: flex;
-  height: 20px;
   width: 100%;
   justify-content: space-between;
   align-items: stretch;
@@ -619,7 +644,9 @@ div.powerline {
   color: $c1;
 
   &>img.logo {
-    margin: 1px .3em 2px .3em;
+    margin: 0 0.1em;
+    height: $heightPowerline;
+    aspect-ratio: 1;
 
     &:last-child {
       transform: scaleX(-100%);
@@ -671,7 +698,7 @@ input[type=text].title {
 }
 
 div.modal {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
@@ -722,5 +749,82 @@ div.modal {
       }
     }
 
+  }
+}
+
+/* Cards */
+div.cards {
+  display: flex;
+  flex-direction: row;
+  flex-shrink: 1;
+  gap: 3px;
+
+  &>div.column {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid $c4;
+    border-radius: $round;
+    gap: 5px;
+    padding: 0 5px 0 5px;
+    flex: 1;
+
+    &>div.header {
+      font-size: 1.5em;
+      text-align: center;
+      line-height: 2em;
+      border-bottom: 1px solid $c6;
+    }
+
+    &>div.footer {
+      border-top: 1px solid $c6;
+    }
+
+    &>div.ticket.card {
+      padding: 3px 8px;
+      border-radius: $round;
+      box-shadow: 0 0 1px 1px rgba(0, 0, 0, 0.1);
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 1;
+
+      &.highlight {
+        box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.4);
+
+      }
+
+      &:hover {
+        background: linear-gradient($cWhite, $c1);
+      }
+
+      &>div.header-line {
+        display: flex;
+        justify-content: stretch;
+        gap: 0.7em;
+        align-items: center;
+
+        flex-grow: 1;
+        flex-shrink: 1;
+
+        &>div {
+
+          &.title {
+            text-wrap-mode: nowrap;
+            flex: 1;
+            overflow-x: hidden;
+            text-overflow: ellipsis;
+          }
+        }
+
+        &>span.time {
+          white-space: nowrap;
+          align-self: flex-start;
+        }
+
+        &>img {
+          width: 1.5em;
+        }
+      }
+    }
   }
 }

@@ -1,78 +1,4 @@
-<div class="ticket-search">
-  <input type="search" placeholder="Search...">
-  <!-- Selectors fro Type, Priority -->
-  <div class="icon-selectors">
-    <template
-      x-for="([prop, multiplier], index) in m_table.order"
-      :key="prop"
-      x-data="{
-        props: {
-          type:     (id => '<img src=' + type_icon(id) + '>'),
-          priority: (id => '<img src=' + priority_icon(id) + '>'),
-          status:   (id => '<span>' + status_name(id) + '</span>'),
-        }
-      }">
-      <div class="sorting">
-        <div class="sorting">
-          <button @click="
-            let pos = parseInt(m_table.order.findIndex(x => x[0] === prop));
-            if (pos > 0) {
-              let tmp = m_table.order[pos-1];
-              m_table.order[pos-1] = m_table.order[pos];
-              m_table.order[pos] = tmp;
-            }
-            ">↑</button>
-          <!-- <button>≡</button> -->
-          <button @click="
-            let pos = parseInt(m_table.order.findIndex(x => x[0] === prop));
-            if (pos < m_table.order.length - 1) {
-              let tmp = m_table.order[pos+1];
-              m_table.order[pos+1] = m_table.order[pos];
-              m_table.order[pos] = tmp;
-            }
-          ">↓</button>
-        </div>
-        <div class="icon-grid">
-          <template x-for="_, id in names[prop]" :key="id">
-            <div :class="m_table.search[prop].includes(id) ? 'selected' : ''"
-              x-html="props[prop](id)"
-              @click="
-                if (!m_table.search[prop].includes(id)) {
-                  m_table.search[prop].push(id);
-                } else {
-                  array_remove(m_table.search[prop], id);
-                }
-                m_table.search[prop].sort();
-              ">
-            </div>
-          </template>
-        </div>
-      </div>
-    </template>
-  </div>
-  <button class="btn-plus" @click="m_nt.show = true"></button>
-  <div>
-    <div class="icon-grid">
-      <div @click="
-        graph.show = !graph.show;
-        if(!(m_table.highlight_key > 0)) {
-          alert('Must select a ticket to see its child graph');
-        } else {
-          $nextTick(() => graph_update());
-        }
-        "
-        :class="graph.show ? 'selected' : ''"><span>Graph</span></div>
-    </div>
-    <div class="icon-grid">
-      <div @click="graph.mode = 'time_left'; graph_update()"
-        :class="graph.mode === 'time_left' ? 'selected' : ''"><span>TL</span></div>
-      <div @click="graph.mode = 'estimated'; graph_update()"
-        :class="graph.mode === 'estimated' ? 'selected' : ''"><span>E</span></div>
-    </div>
-  </div>
-</div>
-
-<div class="ticket-table">
+<div class="ticket-table" x-show="main.mode === 'table'">
   <table
     x-sort="ui_on_reorder_item_to($item, $position)"
     x-sort.config="{ handle : 'handle'}">
@@ -82,13 +8,12 @@
       <tr :id="display_key(key)"
         x-sort:item="t"
         class="ticket"
+        :class="class_highlighted(key)"
         @click.debounce.100ms="
-          graph.show = true;
-          m_table.highlight_key = key;
+          ui_highlight_key(key);
           $nextTick(() => graph_update());
         "
-        @dblclick="edit_ticket(key)"
-        :class="key == m_table.highlight_key ? 'highlight': ''">
+        @dblclick="edit_ticket(key)">
         <td class="handle"><span x-sort:handle>≡</span></td>
         <!-- <td x-text="t.order"></td> -->
         <td>
@@ -117,4 +42,32 @@
       </tr>
     </template>
   </table>
+</div>
+
+<!-- Card view -->
+<div class="cards" x-show="main.mode === 'cards'">
+  <template x-for="(status, status_id) in names.status" :key="status_id">
+    <div class="column" x-sort="ui_on_reorder_item_to($item, $position)" x-sort:group="cards">
+      <div class="header" style="position: sticky; top: 20px" x-text="status"></div>
+      <template x-for="([key, t]) in ui_filter_tickets()" :key="key">
+        <template x-if="t.status == status_id">
+          <div class="ticket card" x-sort:item="t" :class="class_highlighted(key)"
+            @click.debounce.100ms="
+              ui_highlight_key(key);
+              $nextTick(() => graph_update());
+            "
+            @dblclick="edit_ticket(key)">
+            <div class="header-line">
+              <img :src="type_icon(t.type)" class="type" :title="type_name(t.type)">
+              <img class="priority" :src="priority_icon(t.priority)"  :title="priority_name(t.priority)">
+              <span x-text="Math.round(t.order)"></span>
+              <div class="title" x-text="t.title"></div>
+              <span class="time" x-text="const p = progress(t); return fmt_time(p.estimate - p.spent)"></span>
+            </div>
+          </div>
+        </template>
+      </template>
+      <div class="footer"></div>
+    </div>
+  </template>
 </div>

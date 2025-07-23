@@ -9,7 +9,7 @@
                 "cwd": "${workspaceFolder}",
             },
             "problemMatcher": [
-                "$gcc"
+                "$zig"
             ],
             "presentation": {
                 "reveal": "silent"
@@ -24,12 +24,28 @@
                 "cwd": "${workspaceFolder}",
             },
             "problemMatcher": [
-                "$gcc"
+                "$zig"
             ],
             "presentation": {
                 "reveal": "silent"
             },
             "group": "build",
-        }
+        },
+        {
+            "label": "Sass Watch",
+            "command": "sass -w static/ui",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}",
+            },
+            "problemMatcher": [
+                "$zig"
+            ],
+            "presentation": {
+                "reveal": "silent"
+            },
+            "group": "build",
+        },
+        
     ]
 }

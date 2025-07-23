@@ -6,13 +6,14 @@ const httpz = @import("httpz");
 
 const Gofast = @import("gofast.zig").Gofast;
 const Ticket = Gofast.Ticket;
-const SString = @import("smallstring.zig").ShortString;
-const Giberish = @import("gibberish.zig");
+const SString = @import("SmallString.zig");
+const Gibberish = @import("gibberish.zig");
 
 const Allocator = std.mem.Allocator;
+const log = std.log.scoped(.http);
 const StrLiteral = []const u8;
 
-pub const std_options = .{
+pub const std_options = std.Options{
     .log_level = switch (builtin.mode) {
         .Debug => std.log.Level.debug,
         else => std.log.Level.info,
@@ -22,7 +23,7 @@ pub const std_options = .{
 // TODO: Remove this at some point, start passing the allocator around.
 var ALLOC: Allocator = undefined;
 
-fn init_gofast(gf: *Gofast) !void {
+fn init_gofast(gf: *Gofast, gibberish: u32) !void {
     if (gf.max_ticket_key == 0 and gf.names.priorities.items.len == 0) {
         std.log.info("Initializing Gofast from scratch.", .{});
         const alloc = gf.alloc;
@@ -34,7 +35,7 @@ fn init_gofast(gf: *Gofast) !void {
             try SString.fromSlice(alloc, "Normal"),
             try SString.fromSlice(alloc, "Low"),
             try SString.fromSlice(alloc, "Tweak"),
-            try SString.fromSlice(alloc, "Negligable"),
+            try SString.fromSlice(alloc, "Negligible"),
         });
         try gf.names.types.appendSlice(alloc, &[_]SString{
             try SString.fromSlice(alloc, "Task"),
@@ -48,7 +49,9 @@ fn init_gofast(gf: *Gofast) !void {
             try SString.fromSlice(alloc, "Done"),
         });
 
-        try Giberish.initGiberish(100, 5, gf, alloc);
+        if (gibberish > 0)
+            try Gibberish.initGibberish(gibberish, 5, gf, alloc);
+
         try gf.save();
     }
     // Tickets.printChildrenGraph(&gofast.tickets, alloc);
@@ -62,6 +65,7 @@ pub fn main() !void {
     const Config = struct {
         persist: []const u8,
         port: u16 = 20000,
+        gibberish: u32 = 0,
     };
 
     var config = Config{
@@ -74,20 +78,24 @@ pub fn main() !void {
 
         const arg_port = "--port=";
         const arg_persist = "--persist=";
+        const arg_gibberish = "--gibberish=";
 
         for (args[1..], 1..) |arg, i| {
             if (std.mem.startsWith(u8, arg, arg_port)) {
                 config.port = try std.fmt.parseInt(u16, arg[arg_port.len..], 10);
             } else if (std.mem.startsWith(u8, arg, arg_persist)) {
                 config.persist = try ALLOC.dupe(u8, arg[arg_persist.len..]);
+            } else if (std.mem.startsWith(u8, arg, arg_gibberish)) {
+                config.gibberish = try std.fmt.parseInt(u16, arg[arg_gibberish.len..], 10);
             } else {
                 std.debug.print(
                     \\Args:
-                    \\  | Argument   | Default     | Help                               |
-                    \\  |------------|-------------|------------------------------------|
-                    \\  | --port=    | 22000       | Specify the TCP port to listen on. |
-                    \\  | --persist= | persist.gfs | Load/save persistance here         |
-                    \\  |------------|-------------|------------------------------------|
+                    \\  | Argument     | Default     | Help                                  |
+                    \\  |--------------|-------------|---------------------------------------|
+                    \\  | --port=      | 22000       | Specify the TCP port to listen on.    |
+                    \\  | --persist=   | persist.gfs | Load/save persistence here            |
+                    \\  | --gibberish= | 0           | Number of random tickets to init with |
+                    \\  |--------------|-------------|---------------------------------------|
                     \\
                     \\error: Unknown argument {} - '{s}'.
                 , .{ i, arg });
@@ -98,15 +106,18 @@ pub fn main() !void {
 
     var gofast: Gofast = undefined;
     gofast = try Gofast.init(ALLOC, config.persist);
-    try init_gofast(&gofast);
-    var server = try httpz.Server(*Gofast).init(ALLOC, .{ .port = config.port }, &gofast);
+    try init_gofast(&gofast, config.gibberish);
+    var server = try httpz.Server(*Gofast).init(ALLOC, .{
+        .address = "0.0.0.0",
+        .port = config.port,
+    }, &gofast);
     defer {
         server.stop();
         server.deinit();
     }
     ALLOC.free(config.persist);
 
-    var router = server.router(.{});
+    var router = try server.router(.{});
 
     //--------------------------------------------------------------------------
     // ENDPOINTS
@@ -118,6 +129,7 @@ pub fn main() !void {
 
     //TODO: Use @embedFile to have them as "DEFAULTS" but still allow HDD edits, fswatch and reload.
     simpleStaticFile(router, "/", "static/ui/index.html");
+    simpleStaticFile(router, "/experiments", "static/ui/experiments.html");
     simpleStaticFile(router, "/wasm", "zig-out/bin/gofast.wasm");
 
     simpleStaticFiles(router, "/static/*", "static");
@@ -154,11 +166,11 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
                 }
             }
         }
-        fn debug(comptime log: anytype, s: anytype) void {
+        fn debug(comptime logger: anytype, s: anytype) void {
             const fields: []const std.builtin.Type.StructField = comptime std.meta.fields(@TypeOf(s));
 
             inline for (fields) |field| {
-                // NOTE: Useful for debugging the compiletime stuff.
+                // NOTE: Useful for debugging the comptime stuff.
                 //  std.debug.print("{}\n\n", .{@typeInfo(field.type)});
                 //  std.debug.print("{}\n\n", .{@typeInfo(field.type).Pointer});
                 const fmt = switch (@typeInfo(field.type)) {
@@ -170,14 +182,12 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
                     },
                     else => "{}",
                 };
-                log.debug(field.name ++ " = " ++ fmt, .{@field(s, field.name)});
+                logger.debug(field.name ++ " = " ++ fmt, .{@field(s, field.name)});
             }
         }
         fn handler(_: *Gofast, req: *httpz.Request, res: *httpz.Response) !void {
             // Prefix, because the endpoint ends with a *, we need to strip it.
             // /static/* => /static/
-            const log = std.log.scoped(.static);
-
             const url_prefix = endpoint[0 .. endpoint.len - 1];
             // debug(log, .{ .url_prefix = url_prefix });
 
@@ -218,7 +228,7 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
                 path_prefix.len + relative.len + extra_slash,
             );
 
-            // == "./static" and maybe a sash at the end
+            // == "./static" and maybe a slash at the end
             path_buf.appendSliceAssumeCapacity(path_prefix);
 
             // == "./static/" 100%
@@ -230,7 +240,7 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
             path_buf.appendSliceAssumeCapacity(relative);
             setContentType(path_buf.items, res);
 
-            std.log.info("GET {s}", .{url_path});
+            log.info("GET {s}", .{url_path});
             sendStaticFile(
                 small_alloc,
                 path_buf.items,
@@ -242,7 +252,7 @@ fn simpleStaticFiles(router: anytype, comptime endpoint: StrLiteral, comptime re
                 },
                 std.mem.Allocator.Error.OutOfMemory => {
                     log.err(
-                        "static | Failed to allocate file buffer.\nrequested={s}\nresolved ={s}",
+                        "Failed to allocate file buffer.\nrequested={s}\nresolved ={s}",
                         .{ url_path, path_buf.items },
                     );
                     res.status = 500;
@@ -260,7 +270,7 @@ fn simpleStaticFile(router: anytype, comptime endpoint: StrLiteral, comptime fil
             setContentType(filepath, res);
             try sendStaticFile(ALLOC, filepath, res.writer(), null);
             res.status = 200;
-            std.log.info("GET  " ++ endpoint ++ " | " ++ filepath, .{});
+            log.info("GET " ++ endpoint ++ " | " ++ filepath, .{});
         }
     }.handler, .{});
 }
@@ -282,7 +292,7 @@ fn apiGetInit(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void 
     const tickets = gofast.tickets;
     const len = tickets.len;
 
-    std.log.info("GET  /api/init", .{});
+    log.info("GET  /api/init", .{});
     const name_priorities = try sstringArrayToStringArray(alloc, gofast.names.priorities.items);
     defer alloc.free(name_priorities);
 
@@ -314,7 +324,7 @@ fn apiGetInit(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void 
     _ = req;
     const t_end = std.time.nanoTimestamp();
     const took = t_end - t_start;
-    std.log.info("apiGetInit took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
+    log.info("apiGetInit took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
 }
 fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void {
     const t_start = std.time.nanoTimestamp();
@@ -326,7 +336,7 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
     const time_spent_slice = time_spent.slice();
     const len = tickets.len;
 
-    std.log.info("GET  /api/tickets | {} ticket(s).", .{len});
+    log.info("GET  /api/tickets | {} ticket(s).", .{len});
 
     const titles = try sstringArrayToStringArray(alloc, ticket_slice.items(.title));
     defer alloc.free(titles);
@@ -419,7 +429,7 @@ fn apiGetTickets(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
     _ = req;
     const t_end = std.time.nanoTimestamp();
     const took = t_end - t_start;
-    std.log.info("apiGetTickets took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
+    log.info("apiGetTickets took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
 }
 fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !void {
     var maybe_json = try req.jsonObject();
@@ -449,7 +459,7 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
             return error.NoStatus;
         }).integer;
 
-        std.log.info("POST /api/tickets | title={s}, description={s}, parent={?}", .{
+        log.info("POST /api/tickets | title={s}, description={s}, parent={?}", .{
             title,
             description,
             maybe_parent,
@@ -458,7 +468,7 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
         const new_key = blk: {
             gofast.lock.lock();
             defer gofast.lock.unlock();
-            break :blk try gofast.createTicket(
+            const key = try gofast.createTicket(
                 // TODO: Add authentication
                 0,
                 Gofast.timestamp(),
@@ -471,6 +481,8 @@ fn apiPostTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !vo
                     .priority = @intCast(priority_i64),
                 },
             );
+            try gofast.save();
+            break :blk key;
         };
 
         res.status = 200;
@@ -489,6 +501,7 @@ fn apiDeleteTicket(gofast: *Gofast, req: *httpz.Request, res: *httpz.Response) !
             gofast.lock.lock();
             defer gofast.lock.unlock();
             try gofast.deleteTicket(key);
+            try gofast.save();
         }
         res.status = 200;
     } else {

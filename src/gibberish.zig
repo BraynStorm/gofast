@@ -1,7 +1,7 @@
 const std = @import("std");
 const Gofast = @import("gofast.zig").Gofast;
 const Ticket = Gofast.Ticket;
-const SString = @import("smallstring.zig").ShortString;
+const SString = @import("SmallString.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -12,46 +12,94 @@ const RandomStringGenOptions = struct {
     max_words: usize,
 };
 fn RandomStringGen(o: RandomStringGenOptions) type {
-    const randInt = std.rand.intRangeAtMost;
+    const randInt = std.Random.intRangeAtMost;
     const CharBuf = std.ArrayList(u8);
     return struct {
         const Self = @This();
-        const RNG = std.rand.Random;
+        const RNG = std.Random;
+
+        const polish_chars = [_]struct {
+            c: u21,
+            C: u21,
+            weight: f32,
+        }{
+            .{ .c = std.unicode.utf8Decode("a") catch unreachable, .C = std.unicode.utf8Decode("A") catch unreachable, .weight = 0.837 },
+            .{ .c = std.unicode.utf8Decode("ą") catch unreachable, .C = std.unicode.utf8Decode("Ą") catch unreachable, .weight = 0.079 },
+            .{ .c = std.unicode.utf8Decode("b") catch unreachable, .C = std.unicode.utf8Decode("B") catch unreachable, .weight = 0.193 },
+            .{ .c = std.unicode.utf8Decode("c") catch unreachable, .C = std.unicode.utf8Decode("C") catch unreachable, .weight = 0.389 },
+            .{ .c = std.unicode.utf8Decode("ć") catch unreachable, .C = std.unicode.utf8Decode("Ć") catch unreachable, .weight = 0.060 },
+            .{ .c = std.unicode.utf8Decode("d") catch unreachable, .C = std.unicode.utf8Decode("D") catch unreachable, .weight = 0.335 },
+            .{ .c = std.unicode.utf8Decode("e") catch unreachable, .C = std.unicode.utf8Decode("E") catch unreachable, .weight = 0.868 },
+            .{ .c = std.unicode.utf8Decode("ę") catch unreachable, .C = std.unicode.utf8Decode("Ę") catch unreachable, .weight = 0.113 },
+            .{ .c = std.unicode.utf8Decode("f") catch unreachable, .C = std.unicode.utf8Decode("F") catch unreachable, .weight = 0.026 },
+            .{ .c = std.unicode.utf8Decode("g") catch unreachable, .C = std.unicode.utf8Decode("G") catch unreachable, .weight = 0.146 },
+            .{ .c = std.unicode.utf8Decode("h") catch unreachable, .C = std.unicode.utf8Decode("H") catch unreachable, .weight = 0.125 },
+            .{ .c = std.unicode.utf8Decode("i") catch unreachable, .C = std.unicode.utf8Decode("I") catch unreachable, .weight = 0.883 },
+            .{ .c = std.unicode.utf8Decode("j") catch unreachable, .C = std.unicode.utf8Decode("J") catch unreachable, .weight = 0.228 },
+            .{ .c = std.unicode.utf8Decode("k") catch unreachable, .C = std.unicode.utf8Decode("K") catch unreachable, .weight = 0.301 },
+            .{ .c = std.unicode.utf8Decode("l") catch unreachable, .C = std.unicode.utf8Decode("L") catch unreachable, .weight = 0.224 },
+            .{ .c = std.unicode.utf8Decode("ł") catch unreachable, .C = std.unicode.utf8Decode("Ł") catch unreachable, .weight = 0.238 },
+            .{ .c = std.unicode.utf8Decode("m") catch unreachable, .C = std.unicode.utf8Decode("M") catch unreachable, .weight = 0.281 },
+            .{ .c = std.unicode.utf8Decode("n") catch unreachable, .C = std.unicode.utf8Decode("N") catch unreachable, .weight = 0.569 },
+            .{ .c = std.unicode.utf8Decode("ń") catch unreachable, .C = std.unicode.utf8Decode("Ń") catch unreachable, .weight = 0.016 },
+            .{ .c = std.unicode.utf8Decode("o") catch unreachable, .C = std.unicode.utf8Decode("O") catch unreachable, .weight = 0.753 },
+            .{ .c = std.unicode.utf8Decode("ó") catch unreachable, .C = std.unicode.utf8Decode("Ó") catch unreachable, .weight = 0.079 },
+            .{ .c = std.unicode.utf8Decode("p") catch unreachable, .C = std.unicode.utf8Decode("P") catch unreachable, .weight = 0.287 },
+            .{ .c = std.unicode.utf8Decode("r") catch unreachable, .C = std.unicode.utf8Decode("R") catch unreachable, .weight = 0.415 },
+            .{ .c = std.unicode.utf8Decode("s") catch unreachable, .C = std.unicode.utf8Decode("S") catch unreachable, .weight = 0.413 },
+            .{ .c = std.unicode.utf8Decode("ś") catch unreachable, .C = std.unicode.utf8Decode("Ś") catch unreachable, .weight = 0.072 },
+            .{ .c = std.unicode.utf8Decode("t") catch unreachable, .C = std.unicode.utf8Decode("T") catch unreachable, .weight = 0.385 },
+            .{ .c = std.unicode.utf8Decode("u") catch unreachable, .C = std.unicode.utf8Decode("U") catch unreachable, .weight = 0.206 },
+            .{ .c = std.unicode.utf8Decode("w") catch unreachable, .C = std.unicode.utf8Decode("W") catch unreachable, .weight = 0.411 },
+            .{ .c = std.unicode.utf8Decode("y") catch unreachable, .C = std.unicode.utf8Decode("Y") catch unreachable, .weight = 0.403 },
+            .{ .c = std.unicode.utf8Decode("z") catch unreachable, .C = std.unicode.utf8Decode("Z") catch unreachable, .weight = 0.533 },
+            .{ .c = std.unicode.utf8Decode("ź") catch unreachable, .C = std.unicode.utf8Decode("Ź") catch unreachable, .weight = 0.008 },
+            .{ .c = std.unicode.utf8Decode("ż") catch unreachable, .C = std.unicode.utf8Decode("Ż") catch unreachable, .weight = 0.093 },
+        };
+
+        var weight_sum = blk: {
+            var sum: f32 = 0;
+            for (polish_chars) |pc| {
+                sum += pc.weight;
+            }
+            break :blk sum;
+        };
+
+        /// Because why the fuck not
+        fn randomPolishChar(prng: RNG, upper: bool) u21 {
+            var r = std.Random.float(prng, f32) * weight_sum;
+            for (polish_chars) |pc| {
+                if (r < pc.weight) {
+                    return if (upper) pc.C else pc.c;
+                } else {
+                    r -= pc.weight;
+                }
+            }
+            unreachable;
+        }
 
         fn generateWord(
             prng: RNG,
             buf: []u8,
         ) usize {
             const n = randInt(prng, usize, 1, buf.len);
-            var valid_len: usize = 0;
-            while (true) {
-                // PERF:
-                //  This is inefficient, it would be better if we just generate a buffer
-                //  of characters, and start copying them back if they are 'valid' in
-                //  the destination.
-                std.rand.bytes(prng, buf[valid_len..n]);
-
-                for (buf[valid_len..n], valid_len..) |char, i| {
-                    buf[i] = std.ascii.toLower(buf[i]);
-                    if (std.ascii.isWhitespace(char) or
-                        !std.ascii.isAlphabetic(char))
-                    {
-                        valid_len = i;
-                        break;
-                    }
+            var i: usize = 0;
+            for (0..n) |j| {
+                const chosen_u21 = randomPolishChar(prng, j == 0);
+                var char_buf: [6]u8 = undefined;
+                const n_bytes = std.unicode.utf8Encode(chosen_u21, &char_buf) catch unreachable;
+                if (i + n_bytes < buf.len) {
+                    std.mem.copyForwards(u8, buf[i .. i + n_bytes], char_buf[0..n_bytes]);
+                    i += n_bytes;
                 } else {
-                    // We didn't break, break out of the outer loop.
                     break;
                 }
-
-                // Okay, we've stopped somewhere, regenerate the bytes after valid_len,
-                // to generate valid bytes...
             }
 
-            return n;
+            return i;
         }
         fn randEndSentence(prng: RNG, cb: *CharBuf) void {
-            const ends = [_]u8{ '.', '!', '?' };
+            const ends = [_]u8{ '.', '.', '.', '!', '?' };
             const idx = randInt(prng, usize, 0, ends.len);
             if (idx == 0) return;
             cb.appendAssumeCapacity(ends[idx - 1]);
@@ -64,7 +112,7 @@ fn RandomStringGen(o: RandomStringGenOptions) type {
                 " ",
                 " ",
                 " ",
-                "\n",
+                "\n\n",
                 ",",
                 ", ",
                 ", ",
@@ -151,15 +199,15 @@ fn isChildRecursive(
     return false;
 }
 
-/// Init some giberrish in the Gofast ticket system.
+/// Init some gibberish in the Gofast ticket system.
 /// Used for DX improvement.
-pub fn initGiberish(
-    comptime n_tickets: usize,
-    comptime n_people: usize,
+pub fn initGibberish(
+    n_tickets: usize,
+    n_people: usize,
     gofast: *Gofast,
     alloc: Allocator,
 ) !void {
-    var prng = comptime std.rand.DefaultPrng.init(12344321 - 20);
+    var prng = comptime std.Random.DefaultPrng.init(12344321 - 20);
     const random = prng.random();
     const t_start = std.time.nanoTimestamp();
 
@@ -187,11 +235,11 @@ pub fn initGiberish(
         var rand_description = try description_gen.generateWords(random, alloc);
         defer rand_description.deinit(alloc);
 
-        const rand_type = std.rand.intRangeAtMost(random, Gofast.Ticket.Type, 0, max_type);
-        const rand_priority = std.rand.intRangeAtMost(random, Gofast.Ticket.Priority, 0, max_priority);
-        const rand_status = std.rand.intRangeAtMost(random, Gofast.Ticket.Status, 0, max_status);
-        const rand_creator = std.rand.intRangeAtMost(random, Gofast.Person, 0, max_person);
-        const rand_create = std.rand.intRangeAtMost(random, i64, now_start, now_end);
+        const rand_type = std.Random.intRangeAtMost(random, Gofast.Ticket.Type, 0, max_type);
+        const rand_priority = std.Random.intRangeAtMost(random, Gofast.Ticket.Priority, 0, max_priority);
+        const rand_status = std.Random.intRangeAtMost(random, Gofast.Ticket.Status, 0, max_status);
+        const rand_creator = std.Random.intRangeAtMost(random, Gofast.Person, 0, max_person);
+        const rand_create = std.Random.intRangeAtMost(random, i64, now_start, now_end);
 
         const ticket = gofast.createTicket(rand_creator, rand_create, .{
             .title = rand_title.s,
@@ -202,8 +250,8 @@ pub fn initGiberish(
             .status = rand_status,
         }) catch unreachable;
 
-        const rand_update = std.rand.intRangeAtMost(random, i64, rand_create, now_end);
-        const rand_updater = std.rand.intRangeAtMost(random, Gofast.Person, 0, max_person);
+        const rand_update = std.Random.intRangeAtMost(random, i64, rand_create, now_end);
+        const rand_updater = std.Random.intRangeAtMost(random, Gofast.Person, 0, max_person);
 
         // TODO: Make this actually generate history events.
         gofast.tickets.items(.last_updated_on)[ticket - 1] = rand_update;
@@ -216,10 +264,10 @@ pub fn initGiberish(
     //  This can produce cycles,
 
     for (0..n_tickets) |me_usize| {
-        if (std.rand.int(random, u8) <= (180)) {
+        if (std.Random.int(random, u8) <= (180)) {
             const me: Ticket.Key = @intCast(1 + me_usize);
             while (true) {
-                const parent = std.rand.intRangeAtMost(random, Ticket.Key, 1, n_tickets);
+                const parent = std.Random.intRangeAtMost(random, Ticket.Key, 1, @intCast(n_tickets));
 
                 // Am I my own parent (weird)?
                 if (parent == me) continue;
@@ -235,19 +283,19 @@ pub fn initGiberish(
     }
 
     for (0..n_tickets) |ticket_i| {
-        if (std.rand.int(random, u8) <= (255 / 2)) {
+        if (std.Random.int(random, u8) <= (255 / 2)) {
             const key: Ticket.Key = @intCast(1 + ticket_i);
-            const person: Gofast.Person = std.rand.intRangeAtMost(
+            const person: Gofast.Person = std.Random.intRangeAtMost(
                 random,
                 Gofast.Person,
                 1,
-                n_people,
+                @intCast(n_people),
             );
 
             // Generate them in minutes so we don't have to deal with seconds
-            const estimated = std.rand.intRangeAtMost(random, Gofast.TicketTime.Seconds, 1, 60 * 60) * 60;
-            const worktime = std.rand.intRangeAtMost(random, Gofast.TicketTime.Seconds, 1, 60 * 60) * 60;
-            const time_started = std.rand.intRangeAtMost(random, i64, 1727000000, std.time.timestamp());
+            const estimated = std.Random.intRangeAtMost(random, Gofast.TicketTime.Seconds, 1, 60 * 60) * 60;
+            const worktime = std.Random.intRangeAtMost(random, Gofast.TicketTime.Seconds, 1, 60 * 60) * 60;
+            const time_started = std.Random.intRangeAtMost(random, i64, 1727000000, std.time.timestamp());
 
             try gofast.setEstimate(key, person, estimated);
             try gofast.logWork(key, person, time_started, time_started + worktime);
@@ -256,5 +304,5 @@ pub fn initGiberish(
 
     const t_end = std.time.nanoTimestamp();
     const took = t_end - t_start;
-    std.log.info("initGiberish took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
+    std.log.info("initGibberish took {}us", .{@divTrunc(took, @as(i128, std.time.ns_per_us))});
 }

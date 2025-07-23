@@ -1,0 +1,2 @@
+#!/bin/sh
+zig build -Doptimize=ReleaseFast run -- --persist=$1

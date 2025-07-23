@@ -1,0 +1,113 @@
+<div class="top-panel">
+  <div class="powerline">
+    <img src="/static/ui/icons/favicon.svg" class="logo">
+    <nav>
+      <ol>
+        <li><a href="#">About</a></li>
+        <li><a href="#">Help</a></li>
+      </ol>
+    </nav>
+    <img src="/static/ui/icons/favicon.svg" class="logo">
+  </div>
+
+
+  <div class="graph" x-show="graph.show">
+    <div id="container"></div>
+  </div>
+
+  <div class="ticket-search">
+    <div class="icon-grid">
+      <div>
+        <button class="btn-plus" @click="m_nt.show = true"></button>
+      </div>
+    </div>
+    <input type="search" placeholder="Search...">
+    <!-- Selectors for Type, Priority, Status-->
+    <div class="icon-selectors">
+      <template x-for="([prop, multiplier], index) in m_table.order" :key="prop" x-data="{
+        props: {
+          type:     (id => `<img src=${type_icon(id)} title='${type_name(id)} (${id})'>`),
+          priority: (id => `<img src=${priority_icon(id)} title='${priority_name(id)} (${id})'>`),
+          status:   (id => `<span>${status_name(id)}</span>`),
+        },
+        invert: function(prop) {
+        }
+      }">
+        <div class="sorting">
+          <div class="sorting">
+            <button @click="
+            let pos = parseInt(m_table.order.findIndex(x => x[0] === prop));
+            if (pos > 0) {
+              let tmp = m_table.order[pos-1];
+              m_table.order[pos-1] = m_table.order[pos];
+              m_table.order[pos] = tmp;
+            }
+            ">↑</button>
+            <!-- <button>≡</button> -->
+            <button @click="
+            let pos = parseInt(m_table.order.findIndex(x => x[0] === prop));
+            if (pos < m_table.order.length - 1) {
+              let tmp = m_table.order[pos+1];
+              m_table.order[pos+1] = m_table.order[pos];
+              m_table.order[pos] = tmp;
+            }
+          ">↓</button>
+          </div>
+          <div class="icon-grid">
+            <template x-for="_, id in names[prop]" :key="id">
+              <div :class="m_table.search[prop].includes(id) ? 'selected' : ''" x-html="props[prop](id)"
+                @click.debounce.25ms="
+                if (!m_table.search[prop].includes(id)) {
+                  m_table.search[prop].push(id);
+                } else {
+                  array_remove(m_table.search[prop], id);
+                }
+                m_table.search[prop].sort();
+              " @dblclick="
+                const filter = m_table.search[prop];
+                if (names[prop].length == filter.length) {
+                  filter.length = 0;
+                } else {
+                    const clicked = id;
+                    for(let i in names[prop]) {
+                      i = parseInt(i);
+                      if (!filter.includes(i)) {
+                        filter.push(i);
+                      }
+                    }
+                    array_remove(filter, clicked);
+                    filter.sort();
+                  }
+              ">
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+    <div>
+      <div class="icon-grid">
+        <div @click="main.mode='table'" :class="main.mode === 'table' ? 'selected' : ''"><span>View: Table</span></div>
+        <div @click="main.mode='cards'" :class="main.mode === 'cards' ? 'selected' : ''"><span>View: Cards</span></div>
+      </div>
+      <div class="icon-grid">
+        <div @click="
+        if(!(m_table.highlight_key > 0)) {
+          alert('Must select a ticket to see its child graph');
+        } else {
+          graph.show = !graph.show;
+          $nextTick(() => graph_update());
+        }
+        " :class="graph.show ? 'selected' : ''"><span>Graph</span></div>
+      </div>
+      <div class="icon-grid">
+        <div @click="graph.mode = 'time_left'; graph_update()" :class="graph.mode === 'time_left' ? 'selected' : ''">
+          <span>Graph: Left</span>
+        </div>
+        <div @click="graph.mode = 'estimated'; graph_update()" :class="graph.mode === 'estimated' ? 'selected' : ''">
+          <span>Graph: Estimated</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

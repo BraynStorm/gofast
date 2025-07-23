@@ -32,6 +32,8 @@
     <script defer
       src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3/dist/cdn.min.js"></script>
     <script defer
+      src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
+    <script defer
       src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
   </head>
 
@@ -48,9 +50,9 @@
       const bits = [
         fetch_bit('left_panel'),
         [
-          fetch_bit('powerline'),
-          fetch_bit('graph'),
+          fetch_bit('top_panel'),
           fetch_bit('ticket_table'),
+          fetch_bit('cards'),
         ],
         fetch_bit('modal_new_ticket'),
         fetch_bit('tooltip'),
@@ -58,7 +60,7 @@
       let content = '';
       for (let bit of bits) {
         if (Array.isArray(bit)) {
-          content += '<div class=\\fc\\>'.replace(/\\/g, String.fromCharCode(34));
+          content += '<div class=\\main\\>'.replace(/\\/g, String.fromCharCode(34));
           for (let sub_bit of bit) {
             content += await sub_bit;
           }
