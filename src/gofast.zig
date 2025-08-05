@@ -113,7 +113,7 @@ pub const Gofast = struct {
             to: To = undefined,
             from: Key,
 
-            pub const To = SIMDArray(Key, null, 0);
+            pub const To = SIMDArray(Key, 16, 0);
 
             pub fn init(from: Key) FatLink {
                 return FatLink{

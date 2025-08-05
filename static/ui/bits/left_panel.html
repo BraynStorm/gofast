@@ -1,22 +1,25 @@
-<aside class="left edit" x-show="left_panel.mode === 'edit'"
-  style="max-width:40em"
-  x-transition:enter="enter"
-  x-transition:enter-end="enterend"
-  x-transition:enter-start="enterstart"
-  x-transition:leave="leave"
-  x-transition:leave-end="leaveend"
-  x-transition:leave-start="leavestart"
-  x-data="{ e_desc: false }">
+<aside class="left edit" x-show="left_panel.mode === 'edit'" style="max-width:40em" x-transition:enter="enter"
+  x-transition:enter-end="enterend" x-transition:enter-start="enterstart" x-transition:leave="leave"
+  x-transition:leave-end="leaveend" x-transition:leave-start="leavestart" x-data="{ e_desc: false }">
   <div class="controls up">
-    <button @click="stop_edit_ticket(false)"
-      class="btn-cross text">Cancel</button>
-    <button @click="stop_edit_ticket(true)"
-      class="btn-checkmark text">Save</button>
+    <button @click="stop_edit_ticket(false)" class="btn-cross text">Cancel</button>
+    <button @click="stop_edit_ticket(true)" class="btn-checkmark text">Save</button>
   </div>
-  <span>Edit:</span>
-  <span x-text="display_key(m_et.key)" class="et_key"></span>
-  <span>Children:</span>
-  <span x-text="direct_children(m_et.key)" class="et_children"></span>
+  <span>Ticket:
+    <span x-text="display_key(m_et.key)" class="et_key"></span></span>
+  <span>Children:
+    <span x-text="direct_children(m_et.key)" class="et_children"></span>
+  </span>
+  <!-- IF-guard this, so that it doesn't take forever to load the main table. -->
+  <template x-if="left_panel.mode === 'edit'"><span>Parent:
+      <select class="et_parent" x-model="m_et.parent">
+        <option value>No Parent</option>
+        <template x-for="(t, key) in tickets" :key="key">
+          <option :value="key" x-text="display_key(key) + ': ' + t.title.substring(0, 14) + '...'"></option>
+        </template>
+      </select>
+    </span>
+  </template>
   <input type="text" class="title" name="et_title" x-model="m_et.title" />
   <div>
     <!-- Selectors for Type, Priority and Status -->
@@ -27,42 +30,26 @@
             ['priority', id => '<img src=' + double_quotes(priority_icon(id)) + ' title=' + double_quotes(priority_name(id)) + '>'],
             ['status',   id => '<span>'    + status_name(id)   + '</span>'],
           ]
-        }"
-        x-for="([prop, fn]) in props"
-        :key="prop">
+        }" x-for="([prop, fn]) in props" :key="prop">
         <div class="icon-grid">
           <template x-for="_, id in names[prop]" :key="id">
-            <div :class="m_et[prop] === id ? 'selected' : ''"
-              @click="m_et[prop] = id" x-html="fn(id)">
+            <div :class="m_et[prop] === id ? 'selected' : ''" @click="m_et[prop] = id" x-html="fn(id)">
             </div>
           </template>
         </div>
       </template>
     </div>
-    <!-- IF-guard this, so that it doesn't take forever to load the main table. -->
-    <template x-if="left_panel.mode === 'edit'">
-      <select class="et_parent" x-model="m_et.parent">
-        <option value>No Parent</option>
-        <template x-for="(t, key) in tickets"
-          :key="key">
-          <option :value="key"
-            x-text="display_key(key) + ': ' + t.title.substring(0, 14) + '...'"></option>
-        </template>
-      </select>
-    </template>
   </div>
 
   <!-- Editing the description -->
   <div x-show="e_desc" class="description md-editor">
-    <textarea placeholder="Description..."
-      x-model="m_et.description"></textarea>
+    <textarea placeholder="Description..." x-model="m_et.description"></textarea>
     <div class="controls down">
       <button @click="e_desc = false" class="btn-cross text">Cancel</button>
       <button @click="e_desc = false" class="btn-checkmark text">Save</button>
     </div>
   </div>
 
-  <div x-show="!e_desc" class="description" @click="e_desc = !e_desc"
-    x-html="simpleMarkdown(m_et.description)">
+  <div x-show="!e_desc" class="description" @click="e_desc = !e_desc" x-html="simpleMarkdown(m_et.description)">
   </div>
 </aside>

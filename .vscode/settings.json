@@ -23,16 +23,4 @@
         "milli",
         "powerline"
     ],
-    "triggerTaskOnSave.delay": 400,
-    "triggerTaskOnSave.restart": true,
-    "triggerTaskOnSave.showStatusBarToggle": true,
-    "triggerTaskOnSave.showBusyIndicator": true,
-    "triggerTaskOnSave.resultIndicatorResetTimeout": 10,
-    "triggerTaskOnSave.tasks": {
-        "zig build run": [
-            "src/**/*.zig",
-        ],
-    },
-    "zig.path": "~/PATH/zig",
-    "zig.zls.path": "~/PATH/zls",
 }

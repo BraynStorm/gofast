@@ -179,9 +179,17 @@ document.addEventListener("alpine:init", () => {
                         created_on: new Date(created_on[i]),
                         last_updated_by: last_updated_by[i],
                         last_updated_on: new Date(last_updated_on[i]),
-                        /* NOTE(bozho2):
-                            Experiment!
-                        */
+                        children: [],
+                    }
+
+                }
+
+                //- bs: connect the parent-child relationships.
+                for (let i = 0; i < keys.length; ++i) {
+                    const key = keys[i];
+                    const ticket = tickets[key];
+                    if (ticket.parent) {
+                        tickets[ticket.parent].children.push(key);
                     }
                 }
 
@@ -435,6 +443,7 @@ document.addEventListener("alpine:init", () => {
             ticket.last_updated_on = ticket.created_on;
             ticket.created_by = 0; // TODO: Authentication.
             ticket.last_updated_by = 0;
+            ticket.children = [];
 
             this.tickets[ticket.key] = ticket;
 
@@ -453,6 +462,7 @@ document.addEventListener("alpine:init", () => {
                         ticket.key = real_key;
                         ticket.order = real_key;
                         this.tickets[ticket.key] = ticket;
+                        this.tickets[ticket.parent].children.push(real_key);
                     }
                     this.max_key = real_key;
                     console.log("create_ticket: success");
@@ -517,13 +527,7 @@ document.addEventListener("alpine:init", () => {
             this.graph_update();
         },
         direct_children(key) {
-            const tickets = this.tickets;
-            const children = [];
-            for (const child_key in tickets) {
-                if (tickets[child_key].parent === key)
-                    children.push(child_key);
-            }
-            return children;
+            return this.tickets[key].children || [];
         },
         all_children() {
             const tickets = this.tickets;
